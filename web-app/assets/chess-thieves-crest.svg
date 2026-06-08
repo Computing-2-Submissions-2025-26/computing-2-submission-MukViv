@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" role="img" aria-labelledby="title">
+    <title id="title">Chess Thieves crest</title>
+    <rect width="160" height="120" rx="12" fill="#101418"/>
+    <path d="M34 90h92l-12 18H46z" fill="#d6a83a"/>
+    <path d="M45 88l8-43 18 18 9-34 9 34 18-18 8 43z" fill="#ffd766"/>
+    <circle cx="53" cy="43" r="6" fill="#f9f4df"/>
+    <circle cx="80" cy="27" r="7" fill="#f9f4df"/>
+    <circle cx="107" cy="43" r="6" fill="#f9f4df"/>
+    <path d="M45 75c18-14 52-14 70 0v15H45z" fill="#251b31"/>
+    <path d="M58 74c0-12 10-22 22-22s22 10 22 22" fill="#8a2be2"/>
+    <path d="M60 74c6-5 14-8 20-8s14 3 20 8" fill="none" stroke="#ffffff" stroke-width="5"/>
+    <circle cx="70" cy="75" r="4" fill="#ffffff"/>
+    <circle cx="90" cy="75" r="4" fill="#ffffff"/>
+</svg>

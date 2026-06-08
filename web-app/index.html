@@ -1,9 +1,69 @@
-<!-- In HTML Comments are written like this -->
-<!-- They can all be removed for your apps -->
-<!doctype html> <!-- This first line tells browsers to expect modern standard html 5 -->
-<html lang="en-gb"> <!-- This is indicates the page is written in British English, useful for accessibility -->
-<meta charset="utf-8"> <!-- This indicates how the file is encoded. utf-8 is standard -->
-<title>Your Web-app Title</title> <!-- All pages need a title, this will be displayed in the browser's title bar -->
-<link rel="stylesheet" href="default.css"> <!-- Import style sheet – default.css -->
-<link rel="icon" href="./assets/favicon.png"> <!-- Import 'Favorites Icon' – favicon.png -->
-<script type="module" src="main.js"></script> <!-- Load the main script. Must be type="module". Have only one of these -->
+<!doctype html>
+<html lang="en-gb">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chess Thieves</title>
+    <link rel="stylesheet" href="default.css">
+    <link rel="icon" href="./assets/favicon.png">
+    <script type="module" src="main.js"></script>
+</head>
+<body>
+    <header>
+        <img
+            class="crest"
+            src="./assets/chess-thieves-crest.svg"
+            alt=""
+            aria-hidden="true"
+        >
+        <h1>Chess Thieves</h1>
+        <p>Player 1 steals the pieces. Player 2 guards the royal board.</p>
+    </header>
+    <main>
+        <section class="panel" aria-labelledby="thief-title">
+            <h2 id="thief-title">Player 1: Thief</h2>
+            <p>Reach the EXIT square before the King catches you.</p>
+            <ul>
+                <li>Sneak: 1 square up, down, left, or right.</li>
+                <li>Knight: L-shaped chess knight move.</li>
+                <li>Bishop, rook, queen: up to 4 squares.</li>
+            </ul>
+        </section>
+
+        <section class="board-wrap" aria-labelledby="board-title">
+            <h2 id="board-title">Royal Board</h2>
+            <div
+                id="board"
+                class="board"
+                role="grid"
+                aria-label="Chess Thieves board"
+            ></div>
+            <p id="message" class="message" aria-live="polite">
+                The Thief rolls first.
+            </p>
+            <div class="controls" aria-label="Game controls">
+                <button id="king-move" type="button" aria-pressed="true">
+                    King Move
+                </button>
+                <button id="king-barrier" type="button" aria-pressed="false">
+                    Place Barrier
+                </button>
+                <button id="restart" type="button">New Game</button>
+            </div>
+        </section>
+
+        <section class="panel" aria-labelledby="status-title">
+            <h2 id="status-title">Game Status</h2>
+            <p id="turn"></p>
+            <p id="die"></p>
+            <p id="barriers"></p>
+            <p id="result" class="result" aria-live="polite"></p>
+            <ul>
+                <li>Use Arrow keys or WASD to move the cursor.</li>
+                <li>Use Enter or Space to select a square.</li>
+                <li>The King wins after 25 thief turns if the Thief has not escaped.</li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>

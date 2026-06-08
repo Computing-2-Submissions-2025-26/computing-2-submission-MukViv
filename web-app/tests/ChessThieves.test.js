@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import {
+    BARRIER,
+    PLAYER_KING,
+    PLAYER_THIEF,
+    create_empty_board,
+    create_new_game,
+    check_winner,
+    is_path_clear,
+    is_valid_bishop_move,
+    is_valid_knight_move,
+    is_valid_queen_move,
+    is_valid_rook_move,
+    is_valid_sneak_move,
+    place_barrier,
+    roll_thief_die
+} from "../ChessThieves.js";
+
+describe("Chess Thieves rules", function describe_chess_thieves() {
+    it("rolls a value from the thief move die", function test_roll() {
+        assert.equal(roll_thief_die(function minimum_roll() {
+            return 0;
+        }), "sneak");
+        assert.equal(roll_thief_die(function maximum_roll() {
+            return 0.99;
+        }), "queen");
+    });
+
+    it("validates basic thief movement", function test_movement() {
+        const board = create_empty_board();
+
+        assert.equal(
+            is_valid_sneak_move(board, {row: 4, column: 4}, {row: 3, column: 4}),
+            true
+        );
+        assert.equal(
+            is_valid_knight_move(board, {row: 4, column: 4}, {row: 2, column: 5}),
+            true
+        );
+        assert.equal(
+            is_valid_bishop_move(board, {row: 4, column: 4}, {row: 1, column: 1}),
+            true
+        );
+        assert.equal(
+            is_valid_rook_move(board, {row: 4, column: 4}, {row: 4, column: 7}),
+            true
+        );
+        assert.equal(
+            is_valid_queen_move(board, {row: 4, column: 4}, {row: 0, column: 4}),
+            true
+        );
+    });
+
+    it("blocks sliding moves through barriers", function test_path_clear() {
+        const board = create_empty_board();
+
+        board[4][5] = BARRIER;
+
+        assert.equal(
+            is_path_clear(board, {row: 4, column: 4}, {row: 4, column: 7}),
+            false
+        );
+        assert.equal(
+            is_valid_rook_move(board, {row: 4, column: 4}, {row: 4, column: 7}),
+            false
+        );
+    });
+
+    it("places legal barriers and rejects occupied squares", function test_barrier() {
+        const game = {
+            ...create_new_game(function first_roll() {
+                return 0;
+            }),
+            current_player: PLAYER_KING
+        };
+
+        assert.equal(place_barrier(game, game.thief.row, game.thief.column), null);
+        assert.notEqual(place_barrier(game, 1, 1), null);
+    });
+
+    it("detects both win conditions", function test_winners() {
+        const thief_game = {
+            ...create_new_game(),
+            thief: {row: 0, column: 0}
+        };
+        const king_game = {
+            ...create_new_game(),
+            king: {row: 7, column: 0}
+        };
+
+        assert.equal(check_winner(thief_game), PLAYER_THIEF);
+        assert.equal(check_winner(king_game), PLAYER_KING);
+    });
+});
