@@ -16,17 +16,28 @@ import {
     is_valid_sneak_move,
     is_valid_thief_move,
     place_barrier,
-    roll_thief_die
+    roll_thief_die,
+    set_thief_move
 } from "../ChessThieves.js";
 
 describe("Chess Thieves rules", function describe_chess_thieves() {
     it("rolls a value from the thief move die", function test_roll() {
         assert.equal(roll_thief_die(function minimum_roll() {
             return 0;
-        }), "sneak");
+        }), "pawn");
         assert.equal(roll_thief_die(function maximum_roll() {
             return 0.99;
         }), "queen");
+    });
+
+    it("starts Player 1 in a roll phase", function test_roll_phase() {
+        const game = create_new_game();
+        const rolled_game = set_thief_move(game, "pawn");
+
+        assert.equal(game.thief_move, null);
+        assert.notEqual(rolled_game, null);
+        assert.equal(rolled_game.thief_move, "pawn");
+        assert.equal(set_thief_move(rolled_game, "rook"), null);
     });
 
     it("validates basic thief movement", function test_movement() {

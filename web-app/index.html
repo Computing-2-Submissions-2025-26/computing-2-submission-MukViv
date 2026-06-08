@@ -32,12 +32,27 @@
 
         <section class="board-wrap" aria-labelledby="board-title">
             <h2 id="board-title">Royal Board</h2>
-            <div
-                id="board"
-                class="board"
-                role="grid"
-                aria-label="Chess Thieves board"
-            ></div>
+            <div class="board-area">
+                <div
+                    id="board"
+                    class="board"
+                    role="grid"
+                    aria-label="Chess Thieves board"
+                ></div>
+                <button
+                    id="dice-button"
+                    class="dice-button is-hidden"
+                    type="button"
+                    aria-label="Roll movement dice"
+                >
+                    <img
+                        id="dice-button-image"
+                        src="assets/images/dice_stationary_image.png"
+                        alt=""
+                        aria-hidden="true"
+                    >
+                </button>
+            </div>
             <p id="message" class="message" aria-live="polite">
                 The Thief rolls first.
             </p>
@@ -55,7 +70,7 @@
         <section class="panel" aria-labelledby="status-title">
             <h2 id="status-title">Game Status</h2>
             <p id="turn"></p>
-            <p id="die"></p>
+            <p id="die" class="visually-hidden"></p>
             <p id="barriers"></p>
             <p id="result" class="result" aria-live="polite"></p>
             <ul>
@@ -65,5 +80,22 @@
             </ul>
         </section>
     </main>
+    <div id="dice-stage" class="dice-stage is-hidden" aria-hidden="true">
+        <img
+            id="dice-roll-image"
+            class="dice-roll-gif is-hidden"
+            src="assets/images/dice.gif"
+            alt=""
+            aria-hidden="true"
+        >
+        <img
+            id="dice-result-image"
+            class="dice-result-image is-hidden"
+            src=""
+            alt=""
+            aria-hidden="true"
+        >
+    </div>
+    <p id="dice-live" class="visually-hidden" aria-live="polite"></p>
 </body>
 </html>

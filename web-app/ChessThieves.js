@@ -19,8 +19,8 @@ export const PLAYER_THIEF = "thief";
 export const PLAYER_KING = "king";
 
 export const thief_move_die = [
-    "sneak",
-    "sneak",
+    "pawn",
+    "pawn",
     "knight",
     "bishop",
     "rook",
@@ -201,7 +201,7 @@ export function is_valid_thief_move(game, move_type, start, end) {
         return false;
     }
 
-    if (move_type === "sneak") {
+    if (move_type === "pawn" || move_type === "sneak") {
         return is_valid_sneak_move(game.board, start, end);
     }
 
@@ -288,11 +288,9 @@ export function move_thief(game, row, column) {
  * @param {object} game The current game state.
  * @param {number} row The destination row.
  * @param {number} column The destination column.
- * @param {Function} [random_function=Math.random] Optional random number
- * generator used for the next thief die roll.
  * @returns {object|null} A new game state, or null if the move is illegal.
  */
-export function move_king(game, row, column, random_function = Math.random) {
+export function move_king(game, row, column) {
     const end = {row, column};
 
     if (
@@ -306,7 +304,7 @@ export function move_king(game, row, column, random_function = Math.random) {
     return finish_king_turn({
         ...game,
         king: end
-    }, random_function);
+    });
 }
 
 /**
@@ -314,11 +312,9 @@ export function move_king(game, row, column, random_function = Math.random) {
  * @param {object} game The current game state.
  * @param {number} row The row where the barrier should be placed.
  * @param {number} column The column where the barrier should be placed.
- * @param {Function} [random_function=Math.random] Optional random number
- * generator used for the next thief die roll.
  * @returns {object|null} A new game state, or null if the barrier is illegal.
  */
-export function place_barrier(game, row, column, random_function = Math.random) {
+export function place_barrier(game, row, column) {
     const barrier = {row, column};
 
     if (
@@ -343,7 +339,29 @@ export function place_barrier(game, row, column, random_function = Math.random) 
     return finish_king_turn({
         ...next_game,
         board: next_board
-    }, random_function);
+    });
+}
+
+/**
+ * Sets the thief's movement type after Player 1 rolls the movement dice.
+ * @param {object} game The current game state.
+ * @param {string} move_type The rolled movement type.
+ * @returns {object|null} A new game state, or null if the roll cannot be set.
+ */
+export function set_thief_move(game, move_type) {
+    if (
+        game.current_player !== PLAYER_THIEF
+        || is_game_ended(game)
+        || game.thief_move !== null
+        || !thief_move_die.includes(move_type)
+    ) {
+        return null;
+    }
+
+    return finish_game_state({
+        ...game,
+        thief_move: move_type
+    });
 }
 
 /**
@@ -424,18 +442,16 @@ export function is_game_ended(game) {
 
 /**
  * Creates a full starting game state for Chess Thieves.
- * @param {Function} [random_function=Math.random] Optional random number
- * generator used for the first thief die roll.
  * @returns {object} A new playable game state.
  */
-export function create_new_game(random_function = Math.random) {
+export function create_new_game() {
     return finish_game_state({
         thief: copy_position(START_THIEF),
         king: copy_position(START_KING),
         exit: copy_position(START_EXIT),
         barriers: START_BARRIERS.map(copy_position),
         current_player: PLAYER_THIEF,
-        thief_move: roll_thief_die(random_function),
+        thief_move: null,
         turn_count: 1,
         winner: null,
         board: create_empty_board()
@@ -513,7 +529,7 @@ function finish_game_state(game) {
     };
 }
 
-function finish_king_turn(game, random_function) {
+function finish_king_turn(game) {
     const checked_game = finish_game_state(game);
 
     if (checked_game.winner !== null) {
@@ -523,7 +539,7 @@ function finish_king_turn(game, random_function) {
     return finish_game_state({
         ...checked_game,
         current_player: PLAYER_THIEF,
-        thief_move: roll_thief_die(random_function),
+        thief_move: null,
         turn_count: checked_game.turn_count + 1
     });
 }

@@ -77,6 +77,10 @@ main {
     gap: 14px;
 }
 
+.board-area {
+    position: relative;
+}
+
 .board {
     aspect-ratio: 1;
     border: 6px solid #d6a83a;
@@ -226,6 +230,80 @@ button[aria-pressed="true"] {
     margin-top: 12px;
 }
 
+.dice-button {
+    background: transparent;
+    border: 0;
+    bottom: 14px;
+    cursor: pointer;
+    height: 170px;
+    padding: 0;
+    position: absolute;
+    right: 14px;
+    width: 170px;
+    z-index: 10;
+}
+
+.dice-button img {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+}
+
+.dice-button:hover,
+.dice-button:focus {
+    background: transparent;
+    filter: drop-shadow(0 0 14px #39ff14);
+    outline: 4px solid #ffffff;
+    outline-offset: 4px;
+}
+
+.dice-stage {
+    align-items: center;
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    pointer-events: none;
+    position: fixed;
+    z-index: 9;
+}
+
+.dice-roll-gif,
+.dice-result-image {
+    max-height: min(58vh, 420px);
+    max-width: min(72vw, 620px);
+    object-fit: contain;
+}
+
+.dice-result-image {
+    animation: dice-result-pop 250ms ease-out;
+    filter: drop-shadow(0 0 22px #ffd766);
+}
+
+.is-hidden {
+    display: none;
+}
+
+.visually-hidden {
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+}
+
+@keyframes dice-result-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 @media (max-width: 900px) {
     main {
         grid-template-columns: 1fr;
@@ -238,5 +316,12 @@ button[aria-pressed="true"] {
 
     .square {
         font-size: 14px;
+    }
+
+    .dice-button {
+        bottom: 10px;
+        height: 122px;
+        right: 10px;
+        width: 122px;
     }
 }

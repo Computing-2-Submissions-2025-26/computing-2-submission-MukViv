@@ -11,8 +11,20 @@ import {
     is_valid_thief_move,
     move_king,
     move_thief,
-    place_barrier
+    place_barrier,
+    set_thief_move
 } from "./ChessThieves.js";
+import {
+    DICE_ROLL_GIF,
+    DICE_STATIONARY_IMAGE,
+    get_random_move_type,
+    get_roll_result_image,
+    is_dice_activation_key,
+    should_show_dice_button
+} from "./DiceInteraction.js";
+
+const RESULT_DISPLAY_TIME = 900;
+const ROLLING_ANIMATION_TIME = 2000;
 
 const board_element = document.querySelector("#board");
 const turn_element = document.querySelector("#turn");
@@ -23,10 +35,20 @@ const result_element = document.querySelector("#result");
 const move_button = document.querySelector("#king-move");
 const barrier_button = document.querySelector("#king-barrier");
 const restart_button = document.querySelector("#restart");
+const dice_button = document.querySelector("#dice-button");
+const dice_button_image = document.querySelector("#dice-button-image");
+const dice_stage = document.querySelector("#dice-stage");
+const dice_roll_image = document.querySelector("#dice-roll-image");
+const dice_result_image = document.querySelector("#dice-result-image");
+const dice_live_element = document.querySelector("#dice-live");
 
 let game = create_new_game();
 let cursor = {row: game.thief.row, column: game.thief.column};
 let king_action = "move";
+let isDiceAnimationPlaying = false;
+let pendingRolledMoveType = null;
+let diceAnimationTimer = null;
+let diceResultTimer = null;
 
 /**
  * Draws every square and updates all text panels.
@@ -35,6 +57,7 @@ let king_action = "move";
 function render() {
     render_board();
     render_status();
+    render_dice_button();
 }
 
 /**
@@ -98,7 +121,7 @@ function render_status() {
             + " of " + String(MAX_TURNS);
     }
     die_element.textContent = game.current_player === PLAYER_THIEF
-        ? "Thief move: " + game.thief_move
+        ? screen_reader_dice_text()
         : "Thief move waiting for next roll";
     barrier_element.textContent = "Barriers: "
         + String(game.barriers.length) + " of " + String(MAX_BARRIERS);
@@ -115,6 +138,17 @@ function render_status() {
     } else {
         result_element.textContent = "No winner yet.";
     }
+}
+
+/**
+ * Shows or hides the dice button for Player 1's roll phase.
+ * @returns {undefined}
+ */
+function render_dice_button() {
+    dice_button.classList.toggle(
+        "is-hidden",
+        !should_show_dice_button(game, isDiceAnimationPlaying)
+    );
 }
 
 /**
@@ -146,6 +180,12 @@ function play_selected_square(row, column) {
     }
 
     if (game.current_player === PLAYER_THIEF) {
+        if (game.thief_move === null) {
+            message_element.textContent = "Roll the movement dice first.";
+            render();
+            return;
+        }
+
         next_game = move_thief(game, row, column);
     } else if (king_action === "move") {
         next_game = move_king(game, row, column);
@@ -211,10 +251,127 @@ function handle_keydown(event) {
 function restart_game() {
     game = create_new_game();
     king_action = "move";
+    isDiceAnimationPlaying = false;
+    pendingRolledMoveType = null;
+    clear_dice_result_timer();
+    hide_dice_stage();
     cursor = {row: game.thief.row, column: game.thief.column};
-    message_element.textContent = "The Thief rolls first.";
+    message_element.textContent = "Player 1 rolls first.";
+    dice_live_element.textContent = "";
     render();
     focus_cursor_square();
+}
+
+/**
+ * Builds the dice button behaviour and accessibility attributes.
+ * @returns {undefined}
+ */
+function createDiceButton() {
+    dice_button_image.src = DICE_STATIONARY_IMAGE;
+    dice_button.setAttribute("aria-label", "Roll movement dice");
+    dice_button.addEventListener("click", handleDiceRollRequest);
+    dice_button.addEventListener("keydown", handleDiceButtonKeydown);
+}
+
+/**
+ * Handles keyboard activation for the dice button.
+ * @param {KeyboardEvent} event The keyboard event.
+ * @returns {undefined}
+ */
+function handleDiceButtonKeydown(event) {
+    if (is_dice_activation_key(event.key)) {
+        event.preventDefault();
+        handleDiceRollRequest();
+    }
+}
+
+/**
+ * Handles a mouse or keyboard request to roll the movement dice.
+ * @returns {undefined}
+ */
+function handleDiceRollRequest() {
+    if (isDiceAnimationPlaying || !should_show_dice_button(game, false)) {
+        return;
+    }
+
+    const move_type = getRandomMoveType();
+
+    isDiceAnimationPlaying = true;
+    pendingRolledMoveType = move_type;
+    dice_live_element.textContent = "Player 1 is rolling the movement dice.";
+    message_element.textContent = "Rolling...";
+    render();
+    playDiceRollAnimation(move_type);
+}
+
+/**
+ * Plays the central dice roll GIF while the board remains visible.
+ * @param {string} move_type The move type that has been rolled.
+ * @returns {undefined}
+ */
+function playDiceRollAnimation(move_type) {
+    hide_rolled_piece_image();
+    clear_dice_animation_timer();
+    dice_stage.classList.remove("is-hidden");
+    dice_stage.setAttribute("aria-hidden", "true");
+    dice_roll_image.classList.remove("is-hidden");
+    dice_roll_image.src = "";
+    dice_roll_image.src = DICE_ROLL_GIF;
+    diceAnimationTimer = setTimeout(function finish_gif_animation() {
+        showRolledPieceImage(move_type);
+    }, ROLLING_ANIMATION_TIME);
+}
+
+/**
+ * Shows the image for the rolled chess piece.
+ * @param {string} move_type The move type that has been rolled.
+ * @returns {undefined}
+ */
+function showRolledPieceImage(move_type) {
+    if (pendingRolledMoveType === null || move_type === null) {
+        return;
+    }
+
+    const image_path = get_roll_result_image(move_type);
+
+    clear_dice_animation_timer();
+    dice_roll_image.classList.add("is-hidden");
+    dice_result_image.src = image_path;
+    dice_result_image.classList.remove("is-hidden");
+    dice_live_element.textContent = "Player 1 rolled " + move_type + ".";
+    clear_dice_result_timer();
+    diceResultTimer = setTimeout(function finish_after_delay() {
+        finishDiceRoll(move_type);
+    }, RESULT_DISPLAY_TIME);
+}
+
+/**
+ * Finishes the dice roll and updates the game state with the rolled move.
+ * @param {string} move_type The move type that has been rolled.
+ * @returns {undefined}
+ */
+function finishDiceRoll(move_type) {
+    const next_game = set_thief_move(game, move_type);
+
+    if (next_game !== null) {
+        game = next_game;
+    }
+
+    isDiceAnimationPlaying = false;
+    pendingRolledMoveType = null;
+    clear_dice_result_timer();
+    hide_dice_stage();
+    message_element.textContent = "Choose a glowing square.";
+    render();
+    focus_cursor_square();
+}
+
+/**
+ * Gets a random movement type for the dice interaction.
+ * @returns {string} The randomly selected movement type.
+ */
+function getRandomMoveType() {
+    return get_random_move_type();
 }
 
 function clamp(value, minimum, maximum) {
@@ -266,6 +423,7 @@ function legal_action_for_square(row, column) {
 
     if (
         game.current_player === PLAYER_THIEF
+        && game.thief_move !== null
         && is_valid_thief_move(game, game.thief_move, game.thief, position)
     ) {
         return "move";
@@ -368,10 +526,64 @@ function success_message() {
     }
 
     if (game.current_player === PLAYER_THIEF) {
-        return "The King has acted. The Thief rolls " + game.thief_move + ".";
+        return "The King has acted. Player 1 can roll the dice.";
     }
 
     return "The Thief moved. The King may move or place a barrier.";
+}
+
+/**
+ * Clears any pending timer that would finish the dice result display.
+ * @returns {undefined}
+ */
+function clear_dice_result_timer() {
+    if (diceResultTimer !== null) {
+        clearTimeout(diceResultTimer);
+        diceResultTimer = null;
+    }
+}
+
+/**
+ * Clears any pending timer that would finish the dice rolling GIF.
+ * @returns {undefined}
+ */
+function clear_dice_animation_timer() {
+    if (diceAnimationTimer !== null) {
+        clearTimeout(diceAnimationTimer);
+        diceAnimationTimer = null;
+    }
+}
+
+/**
+ * Hides the central dice animation and result display.
+ * @returns {undefined}
+ */
+function hide_dice_stage() {
+    dice_stage.classList.add("is-hidden");
+    clear_dice_animation_timer();
+    dice_roll_image.classList.add("is-hidden");
+    hide_rolled_piece_image();
+}
+
+/**
+ * Hides and clears the rolled piece image.
+ * @returns {undefined}
+ */
+function hide_rolled_piece_image() {
+    dice_result_image.classList.add("is-hidden");
+    dice_result_image.removeAttribute("src");
+}
+
+/**
+ * Creates screen-reader-only dice status text.
+ * @returns {string} The accessible dice status.
+ */
+function screen_reader_dice_text() {
+    if (game.thief_move === null) {
+        return "Player 1 needs to roll the movement dice.";
+    }
+
+    return "Player 1 rolled " + game.thief_move + ".";
 }
 
 board_element.addEventListener("keydown", handle_keydown);
@@ -389,4 +601,5 @@ barrier_button.addEventListener("click", function choose_barrier() {
 });
 restart_button.addEventListener("click", restart_game);
 
+createDiceButton();
 render();
