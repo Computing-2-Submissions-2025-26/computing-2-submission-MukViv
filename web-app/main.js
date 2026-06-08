@@ -6,6 +6,9 @@ import {
     PLAYER_THIEF,
     create_new_game,
     get_square_label,
+    is_valid_barrier_placement,
+    is_valid_king_move,
+    is_valid_thief_move,
     move_king,
     move_thief,
     place_barrier
@@ -49,16 +52,18 @@ function render_board() {
         while (column < BOARD_SIZE) {
             const square = document.createElement("button");
             const label = get_square_label(game, row, column);
+            const legal_action = legal_action_for_square(row, column);
 
             square.type = "button";
-            square.className = square_class(row, column, label);
+            square.className = square_class(row, column, label, legal_action);
             square.dataset.row = String(row);
             square.dataset.column = String(column);
             square.setAttribute(
                 "aria-label",
                 "Row " + String(row + 1) + ", column " + String(column + 1)
-                + ": " + label
+                + ": " + label + legal_label(legal_action)
             );
+            square.title = label + legal_label(legal_action);
             square.tabIndex = square_is_cursor(row, column)
                 ? 0
                 : -1;
@@ -246,7 +251,58 @@ function next_cursor() {
     return {row: game.king.row, column: game.king.column};
 }
 
-function square_class(row, column, label) {
+/**
+ * Finds whether a square is legal for the current action.
+ * @param {number} row The row to check.
+ * @param {number} column The column to check.
+ * @returns {string|null} "move", "barrier", or null.
+ */
+function legal_action_for_square(row, column) {
+    const position = {row, column};
+
+    if (game.winner !== null) {
+        return null;
+    }
+
+    if (
+        game.current_player === PLAYER_THIEF
+        && is_valid_thief_move(game, game.thief_move, game.thief, position)
+    ) {
+        return "move";
+    }
+
+    if (
+        game.current_player === PLAYER_KING
+        && king_action === "move"
+        && is_valid_king_move(game, position)
+    ) {
+        return "move";
+    }
+
+    if (
+        game.current_player === PLAYER_KING
+        && king_action === "barrier"
+        && is_valid_barrier_placement(game, position)
+    ) {
+        return "barrier";
+    }
+
+    return null;
+}
+
+function legal_label(legal_action) {
+    if (legal_action === "move") {
+        return ". Legal move";
+    }
+
+    if (legal_action === "barrier") {
+        return ". Legal barrier placement";
+    }
+
+    return "";
+}
+
+function square_class(row, column, label, legal_action) {
     const classes = [
         "square",
         (row + column) % 2 === 0
@@ -257,6 +313,14 @@ function square_class(row, column, label) {
 
     if (square_is_cursor(row, column)) {
         classes.push("cursor");
+    }
+
+    if (legal_action === "move") {
+        classes.push("legal-move");
+    }
+
+    if (legal_action === "barrier") {
+        classes.push("legal-barrier");
     }
 
     return classes.join(" ");

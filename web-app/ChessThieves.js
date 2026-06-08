@@ -189,6 +189,42 @@ export function is_valid_queen_move(board, start, end) {
 }
 
 /**
+ * Checks whether the thief's current die roll allows a destination square.
+ * @param {object} game The current game state.
+ * @param {string} move_type The movement type rolled for the thief.
+ * @param {object} start The thief's starting position.
+ * @param {object} end The destination position.
+ * @returns {boolean} True when the thief can legally move to the destination.
+ */
+export function is_valid_thief_move(game, move_type, start, end) {
+    if (same_position(end, game.king)) {
+        return false;
+    }
+
+    if (move_type === "sneak") {
+        return is_valid_sneak_move(game.board, start, end);
+    }
+
+    if (move_type === "knight") {
+        return is_valid_knight_move(game.board, start, end);
+    }
+
+    if (move_type === "bishop") {
+        return is_valid_bishop_move(game.board, start, end);
+    }
+
+    if (move_type === "rook") {
+        return is_valid_rook_move(game.board, start, end);
+    }
+
+    if (move_type === "queen") {
+        return is_valid_queen_move(game.board, start, end);
+    }
+
+    return false;
+}
+
+/**
  * Checks that a sliding move does not pass through a barrier.
  * @param {string[][]} board The current board.
  * @param {object} start The starting position.
@@ -235,7 +271,6 @@ export function move_thief(game, row, column) {
     if (
         game.current_player !== PLAYER_THIEF
         || is_game_ended(game)
-        || same_position(end, game.king)
         || !is_valid_thief_move(game, game.thief_move, game.thief, end)
     ) {
         return null;
@@ -259,17 +294,11 @@ export function move_thief(game, row, column) {
  */
 export function move_king(game, row, column, random_function = Math.random) {
     const end = {row, column};
-    const row_difference = Math.abs(row - game.king.row);
-    const column_difference = Math.abs(column - game.king.column);
 
     if (
         game.current_player !== PLAYER_KING
         || is_game_ended(game)
-        || !is_inside_board(row, column)
-        || (row_difference === 0 && column_difference === 0)
-        || row_difference > 1
-        || column_difference > 1
-        || game.board[row][column] === BARRIER
+        || !is_valid_king_move(game, end)
     ) {
         return null;
     }
@@ -295,9 +324,7 @@ export function place_barrier(game, row, column, random_function = Math.random) 
     if (
         game.current_player !== PLAYER_KING
         || is_game_ended(game)
-        || game.barriers.length >= MAX_BARRIERS
-        || !is_inside_board(row, column)
-        || !is_empty_for_barrier(game, barrier)
+        || !is_valid_barrier_placement(game, barrier)
     ) {
         return null;
     }
@@ -317,6 +344,52 @@ export function place_barrier(game, row, column, random_function = Math.random) 
         ...next_game,
         board: next_board
     }, random_function);
+}
+
+/**
+ * Checks whether the king can move to a destination square.
+ * @param {object} game The current game state.
+ * @param {object} end The destination position.
+ * @returns {boolean} True when the king can legally move to the destination.
+ */
+export function is_valid_king_move(game, end) {
+    const row_difference = Math.abs(end.row - game.king.row);
+    const column_difference = Math.abs(end.column - game.king.column);
+
+    return (
+        is_inside_board(end.row, end.column)
+        && (row_difference !== 0 || column_difference !== 0)
+        && row_difference <= 1
+        && column_difference <= 1
+        && game.board[end.row][end.column] !== BARRIER
+    );
+}
+
+/**
+ * Checks whether a barrier may be placed on a square.
+ * @param {object} game The current game state.
+ * @param {object} position The position where the barrier would be placed.
+ * @returns {boolean} True when the barrier placement is legal.
+ */
+export function is_valid_barrier_placement(game, position) {
+    if (
+        game.barriers.length >= MAX_BARRIERS
+        || !is_inside_board(position.row, position.column)
+        || !is_empty_for_barrier(game, position)
+    ) {
+        return false;
+    }
+
+    const next_barriers = game.barriers.concat([position]);
+    const next_game = {
+        ...game,
+        barriers: next_barriers
+    };
+    const next_board = board_from_state(next_game);
+
+    return (
+        is_exit_reachable(next_board, game.thief, game.exit)
+    );
 }
 
 /**
@@ -497,30 +570,6 @@ function is_open_square(board, position) {
         is_inside_board(position.row, position.column)
         && board[position.row][position.column] !== BARRIER
     );
-}
-
-function is_valid_thief_move(game, move_type, start, end) {
-    if (move_type === "sneak") {
-        return is_valid_sneak_move(game.board, start, end);
-    }
-
-    if (move_type === "knight") {
-        return is_valid_knight_move(game.board, start, end);
-    }
-
-    if (move_type === "bishop") {
-        return is_valid_bishop_move(game.board, start, end);
-    }
-
-    if (move_type === "rook") {
-        return is_valid_rook_move(game.board, start, end);
-    }
-
-    if (move_type === "queen") {
-        return is_valid_queen_move(game.board, start, end);
-    }
-
-    return false;
 }
 
 function neighbours(position) {

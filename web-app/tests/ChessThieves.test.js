@@ -7,11 +7,14 @@ import {
     create_new_game,
     check_winner,
     is_path_clear,
+    is_valid_barrier_placement,
     is_valid_bishop_move,
+    is_valid_king_move,
     is_valid_knight_move,
     is_valid_queen_move,
     is_valid_rook_move,
     is_valid_sneak_move,
+    is_valid_thief_move,
     place_barrier,
     roll_thief_die
 } from "../ChessThieves.js";
@@ -76,6 +79,28 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
 
         assert.equal(place_barrier(game, game.thief.row, game.thief.column), null);
         assert.notEqual(place_barrier(game, 1, 1), null);
+    });
+
+    it("checks legal squares for board highlights", function test_highlight_rules() {
+        const game = create_new_game(function queen_roll() {
+            return 0.99;
+        });
+        const king_game = {
+            ...game,
+            current_player: PLAYER_KING
+        };
+
+        assert.equal(
+            is_valid_thief_move(game, "queen", game.thief, {row: 3, column: 0}),
+            true
+        );
+        assert.equal(
+            is_valid_thief_move(game, "queen", game.thief, {row: 2, column: 0}),
+            false
+        );
+        assert.equal(is_valid_king_move(king_game, {row: 1, column: 6}), true);
+        assert.equal(is_valid_barrier_placement(king_game, {row: 1, column: 1}), true);
+        assert.equal(is_valid_barrier_placement(king_game, game.thief), false);
     });
 
     it("detects both win conditions", function test_winners() {
