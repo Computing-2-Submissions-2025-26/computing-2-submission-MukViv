@@ -15,9 +15,10 @@ describe("Chess Thieves layout", function describe_layout() {
     it("keeps the board inside viewport size constraints", function test_board_constraints() {
         assert.match(css, /--board-size:/);
         assert.match(css, /--safe-screen-padding:/);
+        assert.match(css, /\.board-area[\s\S]*max-height: calc\(100svh - var\(--safe-screen-padding\)\);/);
         assert.match(css, /\.game-board,[\s\S]*aspect-ratio: 1 \/ 1;/);
         assert.match(css, /\.game-board,[\s\S]*max-width: 100%;/);
-        assert.match(css, /\.game-board,[\s\S]*max-height: calc\(100svh - var\(--safe-screen-padding\)\);/);
+        assert.match(css, /\.game-board,[\s\S]*max-height: 100%;/);
     });
 
     it("keeps the dice button accessible and keyboard triggerable", function test_dice_access() {
@@ -29,10 +30,12 @@ describe("Chess Thieves layout", function describe_layout() {
     });
 
     it("uses hidden classes for the dice overlay state", function test_overlay_classes() {
+        assert.match(html, /class="board-area"[\s\S]*id="dice-stage"/);
         assert.match(html, /id="dice-stage" class="dice-stage is-hidden"/);
         assert.match(main_js, /dice_stage\.classList\.remove\("is-hidden"\)/);
         assert.match(main_js, /dice_stage\.classList\.add\("is-hidden"\)/);
-        assert.match(css, /\.dice-stage[\s\S]*position: fixed;/);
+        assert.match(css, /\.board-area[\s\S]*position: relative;/);
+        assert.match(css, /\.dice-stage[\s\S]*position: absolute;/);
         assert.match(css, /\.dice-stage[\s\S]*pointer-events: none;/);
     });
 

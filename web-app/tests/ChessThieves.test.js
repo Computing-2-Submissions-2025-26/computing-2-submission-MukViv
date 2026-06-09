@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
     BARRIER,
+    KING,
     PLAYER_KING,
     PLAYER_THIEF,
     create_empty_board,
@@ -69,6 +70,21 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         const board = create_empty_board();
 
         board[4][5] = BARRIER;
+
+        assert.equal(
+            is_path_clear(board, {row: 4, column: 4}, {row: 4, column: 7}),
+            false
+        );
+        assert.equal(
+            is_valid_rook_move(board, {row: 4, column: 4}, {row: 4, column: 7}),
+            false
+        );
+    });
+
+    it("blocks sliding moves through the king", function test_king_blocks_path() {
+        const board = create_empty_board();
+
+        board[4][5] = KING;
 
         assert.equal(
             is_path_clear(board, {row: 4, column: 4}, {row: 4, column: 7}),

@@ -53,9 +53,25 @@
                         aria-hidden="true"
                     >
                 </button>
+                <div id="dice-stage" class="dice-stage is-hidden" aria-hidden="true">
+                    <img
+                        id="dice-roll-image"
+                        class="dice-roll-gif is-hidden"
+                        src="assets/video/dice_roll.gif"
+                        alt=""
+                        aria-hidden="true"
+                    >
+                    <img
+                        id="dice-result-image"
+                        class="dice-result-image is-hidden"
+                        src=""
+                        alt=""
+                        aria-hidden="true"
+                    >
+                </div>
             </div>
             <p id="message" class="message" aria-live="polite">
-                The Thief rolls first.
+                Roll the dice thief! Press [R] or click the dice on the bottom right!
             </p>
             <div class="controls" aria-label="Game controls">
                 <button id="king-move" type="button" aria-pressed="true">
@@ -82,22 +98,6 @@
             </ul>
         </section>
     </main>
-    </div>
-    <div id="dice-stage" class="dice-stage is-hidden" aria-hidden="true">
-        <img
-            id="dice-roll-image"
-            class="dice-roll-gif is-hidden"
-            src="assets/images/dice.gif"
-            alt=""
-            aria-hidden="true"
-        >
-        <img
-            id="dice-result-image"
-            class="dice-result-image is-hidden"
-            src=""
-            alt=""
-            aria-hidden="true"
-        >
     </div>
     <p id="dice-live" class="visually-hidden" aria-live="polite"></p>
 </body>

@@ -19,7 +19,7 @@ import {
 const RESULT_DISPLAY_TIME = 900;
 const ROLLING_ANIMATION_TIME = 2000;
 const DICE_STATIONARY_IMAGE = "assets/images/dice_stationary_image.png";
-const DICE_ROLL_GIF = "assets/images/dice.gif";
+const DICE_ROLL_GIF = "assets/video/dice_roll.gif";
 
 const rollResultImageByMoveType = {
     bishop: "assets/images/roll-results/bishop.png",

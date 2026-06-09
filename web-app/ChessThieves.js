@@ -137,7 +137,7 @@ export function is_valid_knight_move(board, start, end) {
  * @param {object} start The starting position.
  * @param {object} end The destination position.
  * @returns {boolean} True when the move is diagonal, no more than four
- * squares, and does not pass through a barrier.
+ * squares, and does not pass through a barrier or the king.
  */
 export function is_valid_bishop_move(board, start, end) {
     const row_difference = Math.abs(end.row - start.row);
@@ -158,7 +158,7 @@ export function is_valid_bishop_move(board, start, end) {
  * @param {object} start The starting position.
  * @param {object} end The destination position.
  * @returns {boolean} True when the move is horizontal or vertical, no more
- * than four squares, and does not pass through a barrier.
+ * than four squares, and does not pass through a barrier or the king.
  */
 export function is_valid_rook_move(board, start, end) {
     const row_difference = Math.abs(end.row - start.row);
@@ -183,7 +183,7 @@ export function is_valid_rook_move(board, start, end) {
  * @param {object} start The starting position.
  * @param {object} end The destination position.
  * @returns {boolean} True when the move is diagonal, horizontal, or vertical,
- * no more than four squares, and does not pass through a barrier.
+ * no more than four squares, and does not pass through a barrier or the king.
  */
 export function is_valid_queen_move(board, start, end) {
     return (
@@ -229,7 +229,7 @@ export function is_valid_thief_move(game, move_type, start, end) {
 }
 
 /**
- * Checks that a sliding move does not pass through a barrier.
+ * Checks that a sliding move does not pass through a barrier or the king.
  * @param {string[][]} board The current board.
  * @param {object} start The starting position.
  * @param {object} end The destination position.
@@ -251,7 +251,7 @@ export function is_path_clear(board, start, end) {
     let column = start.column + column_step;
 
     while (row !== end.row || column !== end.column) {
-        if (board[row][column] === BARRIER) {
+        if (is_blocking_square(board[row][column])) {
             return false;
         }
 
@@ -619,7 +619,7 @@ function is_exit_reachable(board, start, exit_position) {
 }
 
 /**
- * Checks whether a square is on the board and not blocked by a barrier.
+ * Checks whether a square is on the board and not blocked by a barrier or king.
  * @param {string[][]} board The board to inspect.
  * @param {object} position The square being checked.
  * @returns {boolean} True when the square can be entered.
@@ -627,8 +627,17 @@ function is_exit_reachable(board, start, exit_position) {
 function is_open_square(board, position) {
     return (
         is_inside_board(position.row, position.column)
-        && board[position.row][position.column] !== BARRIER
+        && !is_blocking_square(board[position.row][position.column])
     );
+}
+
+/**
+ * Checks whether a board square blocks thief movement.
+ * @param {string} square The board value to inspect.
+ * @returns {boolean} True when the square is a barrier or the king.
+ */
+function is_blocking_square(square) {
+    return square === BARRIER || square === KING;
 }
 
 /**
@@ -654,5 +663,4 @@ function neighbours(position) {
 function same_position(first, second) {
     return first.row === second.row && first.column === second.column;
 }
-
 
