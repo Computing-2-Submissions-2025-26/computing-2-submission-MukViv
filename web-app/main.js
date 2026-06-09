@@ -12,19 +12,32 @@ import {
     move_king,
     move_thief,
     place_barrier,
+    roll_thief_die,
     set_thief_move
 } from "./ChessThieves.js";
-import {
-    DICE_ROLL_GIF,
-    DICE_STATIONARY_IMAGE,
-    get_random_move_type,
-    get_roll_result_image,
-    is_dice_activation_key,
-    should_show_dice_button
-} from "./DiceInteraction.js";
 
 const RESULT_DISPLAY_TIME = 900;
 const ROLLING_ANIMATION_TIME = 2000;
+const DICE_STATIONARY_IMAGE = "assets/images/dice_stationary_image.png";
+const DICE_ROLL_GIF = "assets/images/dice.gif";
+
+const rollResultImageByMoveType = {
+    bishop: "assets/images/roll-results/bishop.png",
+    knight: "assets/images/roll-results/knight.png",
+    pawn: "assets/images/roll-results/pawn.png",
+    queen: "assets/images/roll-results/queen.png",
+    rook: "assets/images/roll-results/rook.png"
+};
+
+const thiefImageByMoveType = {
+    bishop: "assets/characters/thief-bishop.png",
+    knight: "assets/characters/thief-knight.png",
+    pawn: "assets/characters/thief-pawn.png",
+    queen: "assets/characters/thief-queen.png",
+    rook: "assets/characters/thief-rook.png"
+};
+const THIEF_SACK_IMAGE = "assets/characters/thief-sack.png";
+const KING_IMAGE = "assets/characters/king.png";
 
 const board_element = document.querySelector("#board");
 const turn_element = document.querySelector("#turn");
@@ -90,7 +103,7 @@ function render_board() {
             square.tabIndex = square_is_cursor(row, column)
                 ? 0
                 : -1;
-            square.textContent = square_text(label);
+            add_square_content(square, label);
             square.addEventListener("click", select_square);
 
             board_element.append(square);
@@ -147,7 +160,20 @@ function render_status() {
 function render_dice_button() {
     dice_button.classList.toggle(
         "is-hidden",
-        !should_show_dice_button(game, isDiceAnimationPlaying)
+        !should_show_dice_button()
+    );
+}
+
+/**
+ * Checks whether the dice button should be visible for Player 1.
+ * @returns {boolean} True when Player 1 must roll and no animation is playing.
+ */
+function should_show_dice_button() {
+    return (
+        game.current_player === PLAYER_THIEF
+        && game.thief_move === null
+        && game.winner === null
+        && !isDiceAnimationPlaying
     );
 }
 
@@ -226,21 +252,26 @@ function move_cursor(row_change, column_change) {
  * @returns {undefined}
  */
 function handle_keydown(event) {
-    if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") {
+    const key = event.key.toLowerCase();
+
+    if (event.key === "ArrowUp" || key === "w") {
         event.preventDefault();
         move_cursor(-1, 0);
-    } else if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") {
+    } else if (event.key === "ArrowDown" || key === "s") {
         event.preventDefault();
         move_cursor(1, 0);
-    } else if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+    } else if (event.key === "ArrowLeft" || key === "a") {
         event.preventDefault();
         move_cursor(0, -1);
-    } else if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+    } else if (event.key === "ArrowRight" || key === "d") {
         event.preventDefault();
         move_cursor(0, 1);
     } else if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         play_selected_square(cursor.row, cursor.column);
+    } else if (key === "r") {
+        event.preventDefault();
+        handleDiceRollRequest();
     }
 }
 
@@ -279,7 +310,7 @@ function createDiceButton() {
  * @returns {undefined}
  */
 function handleDiceButtonKeydown(event) {
-    if (is_dice_activation_key(event.key)) {
+    if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         handleDiceRollRequest();
     }
@@ -290,7 +321,7 @@ function handleDiceButtonKeydown(event) {
  * @returns {undefined}
  */
 function handleDiceRollRequest() {
-    if (isDiceAnimationPlaying || !should_show_dice_button(game, false)) {
+    if (isDiceAnimationPlaying || !should_show_dice_button()) {
         return;
     }
 
@@ -332,7 +363,7 @@ function showRolledPieceImage(move_type) {
         return;
     }
 
-    const image_path = get_roll_result_image(move_type);
+    const image_path = rollResultImageByMoveType[move_type];
 
     clear_dice_animation_timer();
     dice_roll_image.classList.add("is-hidden");
@@ -367,17 +398,28 @@ function finishDiceRoll(move_type) {
 }
 
 /**
- * Gets a random movement type for the dice interaction.
- * @returns {string} The randomly selected movement type.
+ * Gets a random movement type from the pure game rules module.
+ * @returns {string} The movement type rolled by the thief movement die.
  */
 function getRandomMoveType() {
-    return get_random_move_type();
+    return roll_thief_die();
 }
 
+/**
+ * Restricts a number so it stays within a minimum and maximum value.
+ * @param {number} value The number to restrict.
+ * @param {number} minimum The smallest allowed value.
+ * @param {number} maximum The largest allowed value.
+ * @returns {number} The restricted number.
+ */
 function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(value, maximum));
 }
 
+/**
+ * Moves keyboard focus to the square currently selected by the board cursor.
+ * @returns {undefined}
+ */
 function focus_cursor_square() {
     const square = board_element.querySelector(
         "[data-row='" + String(cursor.row) + "'][data-column='" + String(cursor.column) + "']"
@@ -388,6 +430,10 @@ function focus_cursor_square() {
     }
 }
 
+/**
+ * Builds the message shown when a player selects an illegal square.
+ * @returns {string} A message explaining why the selected action failed.
+ */
 function invalid_message() {
     if (game.current_player === PLAYER_THIEF) {
         return "That square is not legal for the current thief move.";
@@ -400,6 +446,10 @@ function invalid_message() {
     return "The King can only move one square and cannot move through barriers.";
 }
 
+/**
+ * Chooses where the keyboard cursor should move after a successful turn.
+ * @returns {object} The thief or king position for the next active player.
+ */
 function next_cursor() {
     if (game.current_player === PLAYER_THIEF) {
         return {row: game.thief.row, column: game.thief.column};
@@ -448,6 +498,11 @@ function legal_action_for_square(row, column) {
     return null;
 }
 
+/**
+ * Builds extra accessible label text for a legal action square.
+ * @param {string|null} legal_action The legal action for the square.
+ * @returns {string} Text appended to the square's aria-label.
+ */
 function legal_label(legal_action) {
     if (legal_action === "move") {
         return ". Legal move";
@@ -460,6 +515,14 @@ function legal_label(legal_action) {
     return "";
 }
 
+/**
+ * Builds the CSS class list for one board square.
+ * @param {number} row The square row.
+ * @param {number} column The square column.
+ * @param {string} label The logical square label.
+ * @param {string|null} legal_action The legal action available on the square.
+ * @returns {string} A space-separated CSS class string.
+ */
 function square_class(row, column, label, legal_action) {
     const classes = [
         "square",
@@ -484,10 +547,66 @@ function square_class(row, column, label, legal_action) {
     return classes.join(" ");
 }
 
+/**
+ * Checks whether a square is the current keyboard cursor square.
+ * @param {number} row The square row.
+ * @param {number} column The square column.
+ * @returns {boolean} True when the cursor is on this square.
+ */
 function square_is_cursor(row, column) {
     return cursor.row === row && cursor.column === column;
 }
 
+/**
+ * Adds visible content to a board square.
+ * @param {HTMLElement} square The square button to fill.
+ * @param {string} label The logical square label from the game state.
+ * @returns {undefined}
+ */
+function add_square_content(square, label) {
+    const image_path = square_image(label);
+
+    square.textContent = "";
+
+    if (image_path !== null) {
+        const image = document.createElement("img");
+
+        image.className = "piece-image";
+        image.src = image_path;
+        image.alt = "";
+        image.setAttribute("aria-hidden", "true");
+        square.append(image);
+    } else {
+        square.textContent = square_text(label);
+    }
+}
+
+/**
+ * Gets the image path that should be used for a square.
+ * @param {string} label The logical square label.
+ * @returns {string|null} An image path, or null when text should be shown.
+ */
+function square_image(label) {
+    if (label === "Thief" || label === "Thief at the Exit") {
+        if (game.current_player === PLAYER_KING || game.thief_move === null) {
+            return THIEF_SACK_IMAGE;
+        }
+
+        return thiefImageByMoveType[game.thief_move] || THIEF_SACK_IMAGE;
+    }
+
+    if (label === "King" || label === "King caught the Thief") {
+        return KING_IMAGE;
+    }
+
+    return null;
+}
+
+/**
+ * Gets fallback text for a board square that does not use an image.
+ * @param {string} label The logical square label.
+ * @returns {string} Short visible text for the square.
+ */
 function square_text(label) {
     if (label === "Thief") {
         return "T";
@@ -516,6 +635,10 @@ function square_text(label) {
     return "";
 }
 
+/**
+ * Builds the message shown after a successful move or action.
+ * @returns {string} A short message for the message area.
+ */
 function success_message() {
     if (game.winner === PLAYER_THIEF) {
         return "The Thief reached the exit.";
@@ -586,19 +709,31 @@ function screen_reader_dice_text() {
     return "Player 1 rolled " + game.thief_move + ".";
 }
 
-board_element.addEventListener("keydown", handle_keydown);
-move_button.addEventListener("click", function choose_king_move() {
+/**
+ * Selects the king's move action for Player 2.
+ * @returns {undefined}
+ */
+function choose_king_move() {
     king_action = "move";
     message_element.textContent = "King action: move one square.";
     render();
     focus_cursor_square();
-});
-barrier_button.addEventListener("click", function choose_barrier() {
+}
+
+/**
+ * Selects the barrier placement action for Player 2.
+ * @returns {undefined}
+ */
+function choose_barrier() {
     king_action = "barrier";
     message_element.textContent = "King action: place one barrier.";
     render();
     focus_cursor_square();
-});
+}
+
+board_element.addEventListener("keydown", handle_keydown);
+move_button.addEventListener("click", choose_king_move);
+barrier_button.addEventListener("click", choose_barrier);
 restart_button.addEventListener("click", restart_game);
 
 createDiceButton();

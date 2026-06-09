@@ -9,22 +9,23 @@
     <script type="module" src="main.js"></script>
 </head>
 <body>
+    <div class="game-shell">
     <header>
         <img
             class="crest"
-            src="./assets/chess-thieves-crest.svg"
+            src="./assets/images/chess-thieves-crest.svg"
             alt=""
             aria-hidden="true"
         >
         <h1>Chess Thieves</h1>
-        <p>Player 1 steals the pieces. Player 2 guards the royal board.</p>
+        <p>The THIEF tries to reach the EXIT square. The KING blocks the way and tries to catch the thief.</p>
     </header>
-    <main>
+    <main class="game-layout">
         <section class="panel" aria-labelledby="thief-title">
             <h2 id="thief-title">Player 1: Thief</h2>
             <p>Reach the EXIT square before the King catches you.</p>
             <ul>
-                <li>Sneak: 1 square up, down, left, or right.</li>
+                <li>Pawn (but multidirectional): 1 square up, down, left, or right.</li>
                 <li>Knight: L-shaped chess knight move.</li>
                 <li>Bishop, rook, queen: up to 4 squares.</li>
             </ul>
@@ -35,7 +36,7 @@
             <div class="board-area">
                 <div
                     id="board"
-                    class="board"
+                    class="board game-board"
                     role="grid"
                     aria-label="Chess Thieves board"
                 ></div>
@@ -76,10 +77,12 @@
             <ul>
                 <li>Use Arrow keys or WASD to move the cursor.</li>
                 <li>Use Enter or Space to select a square.</li>
+                <li>Press R to roll during Player 1's roll phase.</li>
                 <li>The King wins after 25 thief turns if the Thief has not escaped.</li>
             </ul>
         </section>
     </main>
+    </div>
     <div id="dice-stage" class="dice-stage is-hidden" aria-hidden="true">
         <img
             id="dice-roll-image"

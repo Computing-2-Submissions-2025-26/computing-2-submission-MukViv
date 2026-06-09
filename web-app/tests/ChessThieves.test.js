@@ -100,13 +100,21 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
             ...game,
             current_player: PLAYER_KING
         };
+        const valid_queen_target = {
+            row: game.thief.row - 4,
+            column: game.thief.column
+        };
+        const invalid_queen_target = {
+            row: game.thief.row - 5,
+            column: game.thief.column
+        };
 
         assert.equal(
-            is_valid_thief_move(game, "queen", game.thief, {row: 3, column: 0}),
+            is_valid_thief_move(game, "queen", game.thief, valid_queen_target),
             true
         );
         assert.equal(
-            is_valid_thief_move(game, "queen", game.thief, {row: 2, column: 0}),
+            is_valid_thief_move(game, "queen", game.thief, invalid_queen_target),
             false
         );
         assert.equal(is_valid_king_move(king_game, {row: 1, column: 6}), true);
@@ -115,13 +123,14 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
     });
 
     it("detects both win conditions", function test_winners() {
+        const base_game = create_new_game();
         const thief_game = {
-            ...create_new_game(),
+            ...base_game,
             thief: {row: 0, column: 0}
         };
         const king_game = {
-            ...create_new_game(),
-            king: {row: 7, column: 0}
+            ...base_game,
+            king: base_game.thief
         };
 
         assert.equal(check_winner(thief_game), PLAYER_THIEF);

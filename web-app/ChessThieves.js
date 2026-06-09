@@ -1,5 +1,5 @@
 /**
- * Pure game rules for Chess Thieves.
+ * Game rules for Chess Thieves.
  *
  * The browser interface imports this module, but this file does not use the
  * DOM. That keeps the rules easy to test from Node or a browser console.
@@ -18,6 +18,10 @@ export const BARRIER = "barrier";
 export const PLAYER_THIEF = "thief";
 export const PLAYER_KING = "king";
 
+/**
+ * The six possible faces on the thief movement die
+ * 33.33% chance of a pawn/sneak move, 16.67% chance of every other move type
+ */
 export const thief_move_die = [
     "pawn",
     "pawn",
@@ -27,7 +31,7 @@ export const thief_move_die = [
     "queen"
 ];
 
-const START_THIEF = Object.freeze({row: 7, column: 0});
+const START_THIEF = Object.freeze({row: 7, column: 6});
 const START_KING = Object.freeze({row: 0, column: 7});
 const START_EXIT = Object.freeze({row: 0, column: 0});
 const START_BARRIERS = Object.freeze([
@@ -495,6 +499,11 @@ export function get_square_label(game, row, column) {
     return "Empty";
 }
 
+/**
+ * Builds a display board from the positions stored in a game state.
+ * @param {object} game The game state containing the thief, king, exit, and barriers.
+ * @returns {string[][]} A board array containing piece labels for each square.
+ */
 function board_from_state(game) {
     const board = create_empty_board();
 
@@ -510,6 +519,11 @@ function board_from_state(game) {
     return board;
 }
 
+/**
+ * Copies a board position object so the original object is not reused.
+ * @param {object} position The position to copy.
+ * @returns {object} A new object with the same row and column.
+ */
 function copy_position(position) {
     return {
         row: position.row,
@@ -517,6 +531,11 @@ function copy_position(position) {
     };
 }
 
+/**
+ * Rebuilds the board and updates the winner field after a state change.
+ * @param {object} game The partly updated game state.
+ * @returns {object} A complete game state with board and winner updated.
+ */
 function finish_game_state(game) {
     const next_game = {
         ...game,
@@ -529,6 +548,11 @@ function finish_game_state(game) {
     };
 }
 
+/**
+ * Ends Player 2's turn and prepares Player 1's next roll phase.
+ * @param {object} game The state after the king has moved or placed a barrier.
+ * @returns {object} A game state ready for the next thief roll, unless the game ended.
+ */
 function finish_king_turn(game) {
     const checked_game = finish_game_state(game);
 
@@ -544,6 +568,12 @@ function finish_king_turn(game) {
     });
 }
 
+/**
+ * Checks whether a square is empty enough for a new barrier.
+ * @param {object} game The current game state.
+ * @param {object} position The square being checked.
+ * @returns {boolean} True when the square does not contain thief, king, exit, or barrier.
+ */
 function is_empty_for_barrier(game, position) {
     return (
         game.board[position.row][position.column] === EMPTY
@@ -553,6 +583,13 @@ function is_empty_for_barrier(game, position) {
     );
 }
 
+/**
+ * Checks whether the thief can still reach the exit without crossing barriers.
+ * @param {string[][]} board The board to search.
+ * @param {object} start The thief's current position.
+ * @param {object} exit_position The exit square.
+ * @returns {boolean} True when there is at least one open path to the exit.
+ */
 function is_exit_reachable(board, start, exit_position) {
     const queue = [copy_position(start)];
     const visited = create_empty_board();
@@ -581,6 +618,12 @@ function is_exit_reachable(board, start, exit_position) {
     return false;
 }
 
+/**
+ * Checks whether a square is on the board and not blocked by a barrier.
+ * @param {string[][]} board The board to inspect.
+ * @param {object} position The square being checked.
+ * @returns {boolean} True when the square can be entered.
+ */
 function is_open_square(board, position) {
     return (
         is_inside_board(position.row, position.column)
@@ -588,6 +631,11 @@ function is_open_square(board, position) {
     );
 }
 
+/**
+ * Gets the four orthogonal neighbouring squares around a position.
+ * @param {object} position The centre position.
+ * @returns {object[]} The up, down, left, and right neighbouring positions.
+ */
 function neighbours(position) {
     return [
         {row: position.row - 1, column: position.column},
@@ -597,6 +645,14 @@ function neighbours(position) {
     ];
 }
 
+/**
+ * Compares two board positions.
+ * @param {object} first The first position.
+ * @param {object} second The second position.
+ * @returns {boolean} True when both positions have the same row and column.
+ */
 function same_position(first, second) {
     return first.row === second.row && first.column === second.column;
 }
+
+

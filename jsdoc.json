@@ -4,7 +4,8 @@
     },
     "source": {
         "include": [
-            "web-app/Module.js"
+            "web-app/ChessThieves.js",
+            "web-app/main.js"
         ],
         "includePattern": "\\.js$",
         "excludePattern": "(node_modules/|docs)"
