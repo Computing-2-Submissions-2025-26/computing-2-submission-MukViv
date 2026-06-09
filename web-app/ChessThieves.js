@@ -31,13 +31,10 @@ export const thief_move_die = [
     "queen"
 ];
 
-const START_THIEF = Object.freeze({row: 7, column: 6});
-const START_KING = Object.freeze({row: 0, column: 7});
-const START_EXIT = Object.freeze({row: 0, column: 0});
-const START_BARRIERS = Object.freeze([
-    Object.freeze({row: 2, column: 3}),
-    Object.freeze({row: 4, column: 4})
-]);
+const START_THIEF_ROW = 7;
+const START_KING_ROW = 0;
+const START_EXIT_ROW = 0;
+const START_BARRIER_COUNT = 2;
 
 /**
  * Creates a blank 8 by 8 board filled with empty squares.
@@ -446,14 +443,20 @@ export function is_game_ended(game) {
 
 /**
  * Creates a full starting game state for Chess Thieves.
+ * The thief, king, and exit keep their starting rows but receive random
+ * columns. The starting barriers are also placed on random empty squares.
+ * @param {Function} [random_function=Math.random] Optional random number
+ * generator used for tests or predictable setups.
  * @returns {object} A new playable game state.
  */
-export function create_new_game() {
+export function create_new_game(random_function = Math.random) {
+    const setup = create_random_setup(random_function);
+
     return finish_game_state({
-        thief: copy_position(START_THIEF),
-        king: copy_position(START_KING),
-        exit: copy_position(START_EXIT),
-        barriers: START_BARRIERS.map(copy_position),
+        thief: setup.thief,
+        king: setup.king,
+        exit: setup.exit,
+        barriers: setup.barriers,
         current_player: PLAYER_THIEF,
         thief_move: null,
         turn_count: 1,
@@ -497,6 +500,150 @@ export function get_square_label(game, row, column) {
     }
 
     return "Empty";
+}
+
+/**
+ * Creates a random starting layout while keeping piece rows fixed.
+ * @param {Function} random_function The random number generator to use.
+ * @returns {object} Starting thief, king, exit, and barrier positions.
+ */
+function create_random_setup(random_function) {
+    const thief = {
+        row: START_THIEF_ROW,
+        column: random_column(random_function)
+    };
+    const exit = {
+        row: START_EXIT_ROW,
+        column: random_column(random_function)
+    };
+    const king = {
+        row: START_KING_ROW,
+        column: random_unused_column(START_KING_ROW, [exit], random_function)
+    };
+    const barriers = create_random_start_barriers(
+        [thief, king, exit],
+        random_function
+    );
+
+    return {thief, king, exit, barriers};
+}
+
+/**
+ * Creates the random barriers that are present when the game starts.
+ * @param {object[]} occupied The positions that cannot contain barriers.
+ * @param {Function} random_function The random number generator to use.
+ * @returns {object[]} Random legal starting barrier positions.
+ */
+function create_random_start_barriers(occupied, random_function) {
+    let barriers = [];
+
+    while (barriers.length < START_BARRIER_COUNT) {
+        let rejected = [];
+        let found_barrier = false;
+
+        while (!found_barrier) {
+            const barrier = random_empty_position(
+                occupied.concat(barriers, rejected),
+                random_function
+            );
+
+            if (is_reachable_with_barrier(occupied, barriers, barrier)) {
+                barriers = barriers.concat([barrier]);
+                found_barrier = true;
+            } else {
+                rejected = rejected.concat([barrier]);
+            }
+        }
+    }
+
+    return barriers;
+}
+
+/**
+ * Checks whether adding one starting barrier still leaves the exit reachable.
+ * @param {object[]} occupied The thief, king, and exit positions.
+ * @param {object[]} barriers The barriers already accepted.
+ * @param {object} barrier The barrier being tested.
+ * @returns {boolean} True when the barrier does not trap the thief.
+ */
+function is_reachable_with_barrier(occupied, barriers, barrier) {
+    const next_barriers = barriers.concat([barrier]);
+    const test_game = {
+        thief: occupied[0],
+        king: occupied[1],
+        exit: occupied[2],
+        barriers: next_barriers
+    };
+
+    return is_exit_reachable(board_from_state(test_game), occupied[0], occupied[2]);
+}
+
+/**
+ * Chooses a random board column.
+ * @param {Function} random_function The random number generator to use.
+ * @returns {number} A column number from 0 to 7.
+ */
+function random_column(random_function) {
+    return Math.floor(random_function() * BOARD_SIZE);
+}
+
+/**
+ * Chooses a random column on a row without using an occupied square.
+ * @param {number} row The row where the column will be used.
+ * @param {object[]} occupied Positions that cannot be used.
+ * @param {Function} random_function The random number generator to use.
+ * @returns {number} A free column on the chosen row.
+ */
+function random_unused_column(row, occupied, random_function) {
+    let column = random_column(random_function);
+
+    while (contains_position(occupied, {row, column})) {
+        column = (column + 1) % BOARD_SIZE;
+    }
+
+    return column;
+}
+
+/**
+ * Chooses a random empty position on the board.
+ * @param {object[]} occupied Positions that cannot be used.
+ * @param {Function} random_function The random number generator to use.
+ * @returns {object} A free board position.
+ */
+function random_empty_position(occupied, random_function) {
+    let square_number = Math.floor(random_function() * BOARD_SIZE * BOARD_SIZE);
+    let position = position_from_square_number(square_number);
+
+    while (contains_position(occupied, position)) {
+        square_number = (square_number + 1) % (BOARD_SIZE * BOARD_SIZE);
+        position = position_from_square_number(square_number);
+    }
+
+    return position;
+}
+
+/**
+ * Converts a number from 0 to 63 into a board position.
+ * @param {number} square_number The flat board square number.
+ * @returns {object} The matching row and column.
+ */
+function position_from_square_number(square_number) {
+    return {
+        row: Math.floor(square_number / BOARD_SIZE),
+        column: square_number % BOARD_SIZE
+    };
+}
+
+/**
+ * Checks whether a position list already contains a position.
+ * @param {object[]} positions The positions to inspect.
+ * @param {object} position The position to find.
+ * @returns {boolean} True when the same row and column already exist.
+ */
+function contains_position(positions, position) {
+    return positions.some(function is_same_position(current_position) {
+        return same_position(current_position, position);
+    });
 }
 
 /**
@@ -663,4 +810,3 @@ function neighbours(position) {
 function same_position(first, second) {
     return first.row === second.row && first.column === second.column;
 }
-

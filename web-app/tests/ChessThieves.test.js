@@ -41,6 +41,25 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         assert.equal(set_thief_move(rolled_game, "rook"), null);
     });
 
+    it("randomises starting columns and starting barriers", function test_random_start() {
+        const game = create_new_game(function controlled_random() {
+            return 0;
+        });
+
+        assert.equal(game.thief.row, 7);
+        assert.equal(game.king.row, 0);
+        assert.equal(game.exit.row, 0);
+        assert.equal(game.thief.column, 0);
+        assert.equal(game.exit.column, 0);
+        assert.equal(game.king.column, 1);
+        assert.equal(game.barriers.length, 2);
+        assert.equal(game.board[game.barriers[0].row][game.barriers[0].column], BARRIER);
+        assert.equal(is_valid_barrier_placement({
+            ...game,
+            current_player: PLAYER_KING
+        }, game.thief), false);
+    });
+
     it("validates basic thief movement", function test_movement() {
         const board = create_empty_board();
 
@@ -133,7 +152,13 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
             is_valid_thief_move(game, "queen", game.thief, invalid_queen_target),
             false
         );
-        assert.equal(is_valid_king_move(king_game, {row: 1, column: 6}), true);
+        assert.equal(
+            is_valid_king_move(
+                king_game,
+                {row: game.king.row + 1, column: game.king.column}
+            ),
+            true
+        );
         assert.equal(is_valid_barrier_placement(king_game, {row: 1, column: 1}), true);
         assert.equal(is_valid_barrier_placement(king_game, game.thief), false);
     });
@@ -142,7 +167,7 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         const base_game = create_new_game();
         const thief_game = {
             ...base_game,
-            thief: {row: 0, column: 0}
+            thief: base_game.exit
         };
         const king_game = {
             ...base_game,
