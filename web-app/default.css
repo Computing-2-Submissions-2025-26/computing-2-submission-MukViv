@@ -60,6 +60,8 @@
     --dice-button-offset: var(--spacing-large);
     --overlay-image-height: min(58vh, 420px);
     --overlay-image-width: min(72vw, 620px);
+    --roll-image-board-scale: 70%;
+    --result-image-board-scale: 40%;
 }
 
 /* base layout */
@@ -368,14 +370,19 @@ button[aria-pressed="true"] {
 
 .dice-roll-gif,
 .dice-result-image {
-    max-height: min(70%, var(--overlay-image-height));
-    max-width: min(70%, var(--overlay-image-width));
     object-fit: contain;
+}
+
+.dice-roll-gif {
+    max-height: min(var(--roll-image-board-scale), var(--overlay-image-height));
+    max-width: min(var(--roll-image-board-scale), var(--overlay-image-width));
 }
 
 .dice-result-image {
     animation: dice-result-pop 250ms ease-out;
     filter: drop-shadow(0 0 var(--spacing-large) var(--color-gold));
+    max-height: min(var(--result-image-board-scale), var(--overlay-image-height));
+    max-width: min(var(--result-image-board-scale), var(--overlay-image-width));
 }
 
 .is-hidden {
