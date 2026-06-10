@@ -21,14 +21,24 @@
         <p>The THIEF tries to reach the EXIT square. The KING blocks the way and tries to catch the thief.</p>
     </header>
     <main class="game-layout">
-        <section class="panel" aria-labelledby="thief-title">
-            <h2 id="thief-title">Player 1: Thief</h2>
-            <p>Reach the EXIT square before the King catches you.</p>
-            <ul>
-                <li>Pawn (but multidirectional): 1 square up, down, left, or right.</li>
-                <li>Knight: L-shaped chess knight move.</li>
-                <li>Bishop, rook, queen: up to 4 squares.</li>
-            </ul>
+        <section class="panel player-guides" aria-label="Player guides">
+            <div class="player-guide" aria-labelledby="thief-title">
+                <h2 id="thief-title">Player 1: Thief</h2>
+                <p>Reach the EXIT square before the King catches you.</p>
+                <ul>
+                    <li>Pawn (but multidirectional): 1 square up, down, left, or right.</li>
+                    <li>Knight: L-shaped chess knight move.</li>
+                    <li>Bishop, rook, queen: up to 4 squares.</li>
+                </ul>
+            </div>
+            <div class="player-guide" aria-labelledby="king-title">
+                <h2 id="king-title">Player 2: King</h2>
+                <p>Block the thief's path and prevent them from reaching the EXIT square, you auto win after 15 turns if they don't escape.</p>
+                <ul>
+                    <li>Use barriers to block the thief's path (max 6 on board).</li>
+                    <li>Move using the king move to block or catch the thief.</li>
+                </ul>
+            </div>
         </section>
 
         <section class="board-wrap" aria-labelledby="board-title">
@@ -40,19 +50,6 @@
                     role="grid"
                     aria-label="Chess Thieves board"
                 ></div>
-                <button
-                    id="dice-button"
-                    class="dice-button is-hidden"
-                    type="button"
-                    aria-label="Roll movement dice"
-                >
-                    <img
-                        id="dice-button-image"
-                        src="assets/images/dice_stationary_image.png"
-                        alt=""
-                        aria-hidden="true"
-                    >
-                </button>
                 <div id="dice-stage" class="dice-stage is-hidden" aria-hidden="true">
                     <img
                         id="dice-roll-image"
@@ -70,9 +67,24 @@
                     >
                 </div>
             </div>
-            <p id="message" class="message" aria-live="polite">
-                Roll the dice thief! Press [R] or click the dice on the bottom right!
-            </p>
+            <div class="message-row">
+                <p id="message" class="message" aria-live="polite">
+                    Roll the dice thief! Press [R] or click the dice beside this message!
+                </p>
+                <button
+                    id="dice-button"
+                    class="dice-button is-hidden"
+                    type="button"
+                    aria-label="Roll movement dice"
+                >
+                    <img
+                        id="dice-button-image"
+                        src="assets/images/dice_stationary_image.png"
+                        alt=""
+                        aria-hidden="true"
+                    >
+                </button>
+            </div>
             <div class="controls" aria-label="Game controls">
                 <button id="king-move" type="button" aria-pressed="true">
                     King Move
@@ -94,7 +106,7 @@
                 <li>Use Arrow keys or WASD to move the cursor.</li>
                 <li>Use Enter or Space to select a square.</li>
                 <li>Press R to roll during Player 1's roll phase.</li>
-                <li>The King wins after 25 thief turns if the Thief has not escaped.</li>
+                <li>The King wins after 15 thief turns if the Thief has not escaped.</li>
             </ul>
         </section>
     </main>

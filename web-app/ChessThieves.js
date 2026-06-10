@@ -6,8 +6,8 @@
  */
 
 const BOARD_SIZE = 8;
-const MAX_TURNS = 25;
-const MAX_BARRIERS = 5;
+const MAX_TURNS = 15;
+const MAX_BARRIERS = 6;
 
 const EMPTY = "empty";
 const THIEF = "thief";

@@ -56,8 +56,7 @@
     --message-min-height: 58px;
     --crest-width: 96px;
     --crest-height: 72px;
-    --dice-button-size: clamp(64px, 9vmin, 110px);
-    --dice-button-offset: var(--spacing-large);
+    --dice-button-size: clamp(96px, 13.5vmin, 165px);
     --overlay-image-height: min(58vh, 420px);
     --overlay-image-width: min(72vw, 620px);
     --roll-image-board-scale: 70%;
@@ -148,6 +147,11 @@ header p {
 .panel ul {
     margin: var(--spacing-small) 0 0;
     padding-left: var(--spacing-large);
+}
+
+.player-guides {
+    display: grid;
+    gap: var(--spacing-x-large);
 }
 
 /* board */
@@ -324,6 +328,15 @@ button[aria-pressed="true"] {
     width: 100%;
 }
 
+.message-row {
+    align-items: center;
+    display: flex;
+    gap: var(--spacing-medium);
+    justify-content: center;
+    max-width: var(--board-max-size);
+    width: 100%;
+}
+
 .result {
     color: var(--color-gold);
     font-size: var(--font-size-large);
@@ -335,12 +348,10 @@ button[aria-pressed="true"] {
 .dice-button {
     background: transparent;
     border: 0;
-    bottom: var(--dice-button-offset);
     cursor: pointer;
+    flex: 0 0 var(--dice-button-size);
     height: var(--dice-button-size);
     padding: 0;
-    position: fixed;
-    right: var(--dice-button-offset);
     width: var(--dice-button-size);
     z-index: 10;
 }
@@ -447,7 +458,6 @@ button:focus-visible,
 @media (max-width: 900px) {
     :root {
         --board-size: min(90vw, 620px);
-        --dice-button-offset: var(--spacing-medium);
     }
 
     .game-layout {
@@ -469,7 +479,7 @@ button:focus-visible,
 @media (max-width: 520px) {
     :root {
         --board-size: min(94vw, 480px);
-        --dice-button-size: clamp(58px, 16vmin, 88px);
+        --dice-button-size: clamp(87px, 24vmin, 132px);
         --safe-screen-padding: 24px;
     }
 
@@ -487,5 +497,14 @@ button:focus-visible,
     .panel,
     .message {
         padding: var(--spacing-small);
+    }
+
+    .message-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .dice-button {
+        align-self: center;
     }
 }
