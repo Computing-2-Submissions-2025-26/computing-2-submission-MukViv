@@ -56,28 +56,68 @@ const dice_result_image = document.querySelector("#dice-result-image");
 const dice_live_element = document.querySelector("#dice-live");
 
 let game = create_new_game();
-let cursor = {row: game.thief.row, column: game.thief.column};
+let cursor = {
+    row: game.thief.row,
+    column: game.thief.column
+};
 let king_action = "move";
 let isDiceAnimationPlaying = false;
 let pendingRolledMoveType = null;
 let diceAnimationTimer = null;
 let diceResultTimer = null;
 
+let render;
+let render_board;
+let render_status;
+let render_dice_button;
+let should_show_dice_button;
+let select_square;
+let play_selected_square;
+let move_cursor;
+let handle_keydown;
+let restart_game;
+let createDiceButton;
+let handleDiceButtonKeydown;
+let handleDiceRollRequest;
+let playDiceRollAnimation;
+let showRolledPieceImage;
+let finishDiceRoll;
+let getRandomMoveType;
+let clamp;
+let focus_cursor_square;
+let invalid_message;
+let next_cursor;
+let legal_action_for_square;
+let legal_label;
+let square_class;
+let square_is_cursor;
+let add_square_content;
+let square_image;
+let square_text;
+let success_message;
+let clear_dice_result_timer;
+let clear_dice_animation_timer;
+let hide_dice_stage;
+let hide_rolled_piece_image;
+let screen_reader_dice_text;
+let choose_king_move;
+let choose_barrier;
+
 /**
  * Draws every square and updates all text panels.
  * @returns {undefined}
  */
-function render() {
+render = function render() {
     render_board();
     render_status();
     render_dice_button();
-}
+};
 
 /**
  * Draws the chessboard buttons.
  * @returns {undefined}
  */
-function render_board() {
+render_board = function render_board() {
     board_element.innerHTML = "";
 
     let row = 0;
@@ -100,9 +140,11 @@ function render_board() {
                 + ": " + label + legal_label(legal_action)
             );
             square.title = label + legal_label(legal_action);
-            square.tabIndex = square_is_cursor(row, column)
+            square.tabIndex = (
+                square_is_cursor(row, column)
                 ? 0
-                : -1;
+                : -1
+            );
             add_square_content(square, label);
             square.addEventListener("click", select_square);
 
@@ -112,83 +154,101 @@ function render_board() {
 
         row += 1;
     }
-}
+};
 
 /**
  * Updates the text panels and action buttons.
  * @returns {undefined}
  */
-function render_status() {
+render_status = function render_status() {
     const winner = game.winner;
-    const current_player = game.current_player === PLAYER_THIEF
+    const current_player = (
+        game.current_player === PLAYER_THIEF
         ? "Player 1, Thief"
-        : "Player 2, King";
+        : "Player 2, King"
+    );
+    const turn_number = String(Math.min(game.turn_count, MAX_TURNS));
+    const max_turns = String(MAX_TURNS);
+    let turn_text;
 
     if (winner === null) {
-        turn_element.textContent = current_player
-            + " - turn " + String(Math.min(game.turn_count, MAX_TURNS))
-            + " of " + String(MAX_TURNS);
+        turn_text = current_player + " - turn " + turn_number;
     } else {
-        turn_element.textContent = "Game ended on turn "
-            + String(Math.min(game.turn_count, MAX_TURNS))
-            + " of " + String(MAX_TURNS);
+        turn_text = "Game ended on turn " + turn_number;
     }
-    die_element.textContent = game.current_player === PLAYER_THIEF
-        ? screen_reader_dice_text()
-        : "Thief move waiting for next roll";
-    barrier_element.textContent = "Barriers: "
-        + String(game.barriers.length) + " of " + String(MAX_BARRIERS);
 
-    move_button.disabled = game.current_player !== PLAYER_KING || winner !== null;
-    barrier_button.disabled = game.current_player !== PLAYER_KING || winner !== null;
+    turn_element.textContent = turn_text + " of " + max_turns;
+    die_element.textContent = (
+        game.current_player === PLAYER_THIEF
+        ? screen_reader_dice_text()
+        : "Thief move waiting for next roll"
+    );
+    const barrier_count = String(game.barriers.length);
+
+    barrier_element.textContent = (
+        "Barriers: " + barrier_count + " of " + String(MAX_BARRIERS)
+    );
+
+    const disable_king_controls = (
+        game.current_player !== PLAYER_KING
+        || winner !== null
+    );
+
+    move_button.disabled = disable_king_controls;
+    barrier_button.disabled = disable_king_controls;
     move_button.setAttribute("aria-pressed", String(king_action === "move"));
-    barrier_button.setAttribute("aria-pressed", String(king_action === "barrier"));
+    barrier_button.setAttribute(
+        "aria-pressed",
+        String(king_action === "barrier")
+    );
 
     if (winner === PLAYER_THIEF) {
-        result_element.textContent = "The Thief escaped with the magical pieces.";
+        result_element.textContent = (
+            "The Thief escaped with the magical pieces."
+        );
     } else if (winner === PLAYER_KING) {
         result_element.textContent = "The King recovered the stolen pieces.";
     } else {
         result_element.textContent = "No winner yet.";
     }
-}
+};
 
 /**
  * Shows or hides the dice button for Player 1's roll phase.
  * @returns {undefined}
  */
-function render_dice_button() {
+render_dice_button = function render_dice_button() {
     dice_button.classList.toggle(
         "is-hidden",
         !should_show_dice_button()
     );
-}
+};
 
 /**
  * Checks whether the dice button should be visible for Player 1.
  * @returns {boolean} True when Player 1 must roll and no animation is playing.
  */
-function should_show_dice_button() {
+should_show_dice_button = function should_show_dice_button() {
     return (
         game.current_player === PLAYER_THIEF
         && game.thief_move === null
         && game.winner === null
         && !isDiceAnimationPlaying
     );
-}
+};
 
 /**
  * Handles mouse or keyboard selection of a square.
  * @param {Event} event The click event.
  * @returns {undefined}
  */
-function select_square(event) {
+select_square = function select_square(event) {
     const row = Number(event.currentTarget.dataset.row);
     const column = Number(event.currentTarget.dataset.column);
 
     cursor = {row, column};
     play_selected_square(row, column);
-}
+};
 
 /**
  * Applies the current player's action to the selected square.
@@ -196,7 +256,7 @@ function select_square(event) {
  * @param {number} column The selected column.
  * @returns {undefined}
  */
-function play_selected_square(row, column) {
+play_selected_square = function play_selected_square(row, column) {
     let next_game = null;
 
     if (game.winner !== null) {
@@ -229,7 +289,7 @@ function play_selected_square(row, column) {
 
     render();
     focus_cursor_square();
-}
+};
 
 /**
  * Moves the keyboard cursor around the board.
@@ -237,21 +297,21 @@ function play_selected_square(row, column) {
  * @param {number} column_change The column movement.
  * @returns {undefined}
  */
-function move_cursor(row_change, column_change) {
+move_cursor = function move_cursor(row_change, column_change) {
     cursor = {
         row: clamp(cursor.row + row_change, 0, BOARD_SIZE - 1),
         column: clamp(cursor.column + column_change, 0, BOARD_SIZE - 1)
     };
     render();
     focus_cursor_square();
-}
+};
 
 /**
  * Handles keyboard controls for the board.
  * @param {KeyboardEvent} event The keyboard event.
  * @returns {undefined}
  */
-function handle_keydown(event) {
+handle_keydown = function handle_keydown(event) {
     const key = event.key.toLowerCase();
 
     if (event.key === "ArrowUp" || key === "w") {
@@ -273,13 +333,13 @@ function handle_keydown(event) {
         event.preventDefault();
         handleDiceRollRequest();
     }
-}
+};
 
 /**
  * Starts a fresh game.
  * @returns {undefined}
  */
-function restart_game() {
+restart_game = function restart_game() {
     game = create_new_game();
     king_action = "move";
     isDiceAnimationPlaying = false;
@@ -291,36 +351,36 @@ function restart_game() {
     dice_live_element.textContent = "";
     render();
     focus_cursor_square();
-}
+};
 
 /**
  * Builds the dice button behaviour and accessibility attributes.
  * @returns {undefined}
  */
-function createDiceButton() {
+createDiceButton = function createDiceButton() {
     dice_button_image.src = DICE_STATIONARY_IMAGE;
     dice_button.setAttribute("aria-label", "Roll movement dice");
     dice_button.addEventListener("click", handleDiceRollRequest);
     dice_button.addEventListener("keydown", handleDiceButtonKeydown);
-}
+};
 
 /**
  * Handles keyboard activation for the dice button.
  * @param {KeyboardEvent} event The keyboard event.
  * @returns {undefined}
  */
-function handleDiceButtonKeydown(event) {
+handleDiceButtonKeydown = function handleDiceButtonKeydown(event) {
     if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         handleDiceRollRequest();
     }
-}
+};
 
 /**
  * Handles a mouse or keyboard request to roll the movement dice.
  * @returns {undefined}
  */
-function handleDiceRollRequest() {
+handleDiceRollRequest = function handleDiceRollRequest() {
     if (isDiceAnimationPlaying || !should_show_dice_button()) {
         return;
     }
@@ -333,14 +393,14 @@ function handleDiceRollRequest() {
     message_element.textContent = "Rolling...";
     render();
     playDiceRollAnimation(move_type);
-}
+};
 
 /**
  * Plays the central dice roll GIF while the board remains visible.
  * @param {string} move_type The move type that has been rolled.
  * @returns {undefined}
  */
-function playDiceRollAnimation(move_type) {
+playDiceRollAnimation = function playDiceRollAnimation(move_type) {
     hide_rolled_piece_image();
     clear_dice_animation_timer();
     dice_stage.classList.remove("is-hidden");
@@ -351,14 +411,14 @@ function playDiceRollAnimation(move_type) {
     diceAnimationTimer = setTimeout(function finish_gif_animation() {
         showRolledPieceImage(move_type);
     }, ROLLING_ANIMATION_TIME);
-}
+};
 
 /**
  * Shows the image for the rolled chess piece.
  * @param {string} move_type The move type that has been rolled.
  * @returns {undefined}
  */
-function showRolledPieceImage(move_type) {
+showRolledPieceImage = function showRolledPieceImage(move_type) {
     if (pendingRolledMoveType === null || move_type === null) {
         return;
     }
@@ -374,14 +434,14 @@ function showRolledPieceImage(move_type) {
     diceResultTimer = setTimeout(function finish_after_delay() {
         finishDiceRoll(move_type);
     }, RESULT_DISPLAY_TIME);
-}
+};
 
 /**
  * Finishes the dice roll and updates the game state with the rolled move.
  * @param {string} move_type The move type that has been rolled.
  * @returns {undefined}
  */
-function finishDiceRoll(move_type) {
+finishDiceRoll = function finishDiceRoll(move_type) {
     const next_game = set_thief_move(game, move_type);
 
     if (next_game !== null) {
@@ -395,15 +455,15 @@ function finishDiceRoll(move_type) {
     message_element.textContent = "Choose a glowing square.";
     render();
     focus_cursor_square();
-}
+};
 
 /**
  * Gets a random movement type from the pure game rules module.
  * @returns {string} The movement type rolled by the thief movement die.
  */
-function getRandomMoveType() {
+getRandomMoveType = function getRandomMoveType() {
     return roll_thief_die();
-}
+};
 
 /**
  * Restricts a number so it stays within a minimum and maximum value.
@@ -412,29 +472,32 @@ function getRandomMoveType() {
  * @param {number} maximum The largest allowed value.
  * @returns {number} The restricted number.
  */
-function clamp(value, minimum, maximum) {
+clamp = function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(value, maximum));
-}
+};
 
 /**
  * Moves keyboard focus to the square currently selected by the board cursor.
  * @returns {undefined}
  */
-function focus_cursor_square() {
+focus_cursor_square = function focus_cursor_square() {
+    const row_selector = "[data-row='" + String(cursor.row) + "']";
+    const column_selector = "[data-column='" + String(cursor.column) + "']";
+    const selector = row_selector + column_selector;
     const square = board_element.querySelector(
-        "[data-row='" + String(cursor.row) + "'][data-column='" + String(cursor.column) + "']"
+        selector
     );
 
     if (square !== null) {
         square.focus();
     }
-}
+};
 
 /**
  * Builds the message shown when a player selects an illegal square.
  * @returns {string} A message explaining why the selected action failed.
  */
-function invalid_message() {
+invalid_message = function invalid_message() {
     if (game.current_player === PLAYER_THIEF) {
         return "That square is not legal for the current thief move.";
     }
@@ -443,20 +506,22 @@ function invalid_message() {
         return "That barrier cannot be placed there.";
     }
 
-    return "The King can only move one square and cannot move through barriers.";
-}
+    return (
+        "The King can only move one square and cannot move through barriers."
+    );
+};
 
 /**
  * Chooses where the keyboard cursor should move after a successful turn.
  * @returns {object} The thief or king position for the next active player.
  */
-function next_cursor() {
+next_cursor = function next_cursor() {
     if (game.current_player === PLAYER_THIEF) {
         return {row: game.thief.row, column: game.thief.column};
     }
 
     return {row: game.king.row, column: game.king.column};
-}
+};
 
 /**
  * Finds whether a square is legal for the current action.
@@ -464,7 +529,7 @@ function next_cursor() {
  * @param {number} column The column to check.
  * @returns {string|null} "move", "barrier", or null.
  */
-function legal_action_for_square(row, column) {
+legal_action_for_square = function legal_action_for_square(row, column) {
     const position = {row, column};
 
     if (game.winner !== null) {
@@ -496,14 +561,14 @@ function legal_action_for_square(row, column) {
     }
 
     return null;
-}
+};
 
 /**
  * Builds extra accessible label text for a legal action square.
  * @param {string|null} legal_action The legal action for the square.
  * @returns {string} Text appended to the square's aria-label.
  */
-function legal_label(legal_action) {
+legal_label = function legal_label(legal_action) {
     if (legal_action === "move") {
         return ". Legal move";
     }
@@ -513,7 +578,7 @@ function legal_label(legal_action) {
     }
 
     return "";
-}
+};
 
 /**
  * Builds the CSS class list for one board square.
@@ -523,12 +588,14 @@ function legal_label(legal_action) {
  * @param {string|null} legal_action The legal action available on the square.
  * @returns {string} A space-separated CSS class string.
  */
-function square_class(row, column, label, legal_action) {
+square_class = function square_class(row, column, label, legal_action) {
     const classes = [
         "square",
-        (row + column) % 2 === 0
+        (
+            (row + column) % 2 === 0
             ? "light"
-            : "dark",
+            : "dark"
+        ),
         label.toLowerCase().replaceAll(" ", "-")
     ];
 
@@ -545,7 +612,7 @@ function square_class(row, column, label, legal_action) {
     }
 
     return classes.join(" ");
-}
+};
 
 /**
  * Checks whether a square is the current keyboard cursor square.
@@ -553,9 +620,9 @@ function square_class(row, column, label, legal_action) {
  * @param {number} column The square column.
  * @returns {boolean} True when the cursor is on this square.
  */
-function square_is_cursor(row, column) {
+square_is_cursor = function square_is_cursor(row, column) {
     return cursor.row === row && cursor.column === column;
-}
+};
 
 /**
  * Adds visible content to a board square.
@@ -563,7 +630,7 @@ function square_is_cursor(row, column) {
  * @param {string} label The logical square label from the game state.
  * @returns {undefined}
  */
-function add_square_content(square, label) {
+add_square_content = function add_square_content(square, label) {
     const image_path = square_image(label);
 
     square.textContent = "";
@@ -579,14 +646,14 @@ function add_square_content(square, label) {
     } else {
         square.textContent = square_text(label);
     }
-}
+};
 
 /**
  * Gets the image path that should be used for a square.
  * @param {string} label The logical square label.
  * @returns {string|null} An image path, or null when text should be shown.
  */
-function square_image(label) {
+square_image = function square_image(label) {
     if (label === "Thief" || label === "Thief at the Exit") {
         if (game.current_player === PLAYER_KING || game.thief_move === null) {
             return THIEF_SACK_IMAGE;
@@ -600,14 +667,14 @@ function square_image(label) {
     }
 
     return null;
-}
+};
 
 /**
  * Gets fallback text for a board square that does not use an image.
  * @param {string} label The logical square label.
  * @returns {string} Short visible text for the square.
  */
-function square_text(label) {
+square_text = function square_text(label) {
     if (label === "Thief") {
         return "T";
     }
@@ -633,13 +700,13 @@ function square_text(label) {
     }
 
     return "";
-}
+};
 
 /**
  * Builds the message shown after a successful move or action.
  * @returns {string} A short message for the message area.
  */
-function success_message() {
+success_message = function success_message() {
     if (game.winner === PLAYER_THIEF) {
         return "The Thief reached the exit.";
     }
@@ -653,83 +720,83 @@ function success_message() {
     }
 
     return "The Thief moved. The King may move or place a barrier.";
-}
+};
 
 /**
  * Clears any pending timer that would finish the dice result display.
  * @returns {undefined}
  */
-function clear_dice_result_timer() {
+clear_dice_result_timer = function clear_dice_result_timer() {
     if (diceResultTimer !== null) {
         clearTimeout(diceResultTimer);
         diceResultTimer = null;
     }
-}
+};
 
 /**
  * Clears any pending timer that would finish the dice rolling GIF.
  * @returns {undefined}
  */
-function clear_dice_animation_timer() {
+clear_dice_animation_timer = function clear_dice_animation_timer() {
     if (diceAnimationTimer !== null) {
         clearTimeout(diceAnimationTimer);
         diceAnimationTimer = null;
     }
-}
+};
 
 /**
  * Hides the central dice animation and result display.
  * @returns {undefined}
  */
-function hide_dice_stage() {
+hide_dice_stage = function hide_dice_stage() {
     dice_stage.classList.add("is-hidden");
     clear_dice_animation_timer();
     dice_roll_image.classList.add("is-hidden");
     hide_rolled_piece_image();
-}
+};
 
 /**
  * Hides and clears the rolled piece image.
  * @returns {undefined}
  */
-function hide_rolled_piece_image() {
+hide_rolled_piece_image = function hide_rolled_piece_image() {
     dice_result_image.classList.add("is-hidden");
     dice_result_image.removeAttribute("src");
-}
+};
 
 /**
  * Creates screen-reader-only dice status text.
  * @returns {string} The accessible dice status.
  */
-function screen_reader_dice_text() {
+screen_reader_dice_text = function screen_reader_dice_text() {
     if (game.thief_move === null) {
         return "Player 1 needs to roll the movement dice.";
     }
 
     return "Player 1 rolled " + game.thief_move + ".";
-}
+};
 
 /**
  * Selects the king's move action for Player 2.
  * @returns {undefined}
  */
-function choose_king_move() {
+choose_king_move = function choose_king_move() {
     king_action = "move";
     message_element.textContent = "King action: move one square.";
     render();
     focus_cursor_square();
-}
+};
 
 /**
  * Selects the barrier placement action for Player 2.
  * @returns {undefined}
  */
-function choose_barrier() {
+choose_barrier = function choose_barrier() {
     king_action = "barrier";
     message_element.textContent = "King action: place one barrier.";
     render();
     focus_cursor_square();
-}
+};
 
 board_element.addEventListener("keydown", handle_keydown);
 move_button.addEventListener("click", choose_king_move);

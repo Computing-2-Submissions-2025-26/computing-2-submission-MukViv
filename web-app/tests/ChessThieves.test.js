@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {describe, it} from "node:test";
 import {
     BARRIER,
     KING,
@@ -41,9 +42,13 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         assert.equal(set_thief_move(rolled_game, "rook"), null);
     });
 
-    it("randomises starting columns and starting barriers", function test_random_start() {
+    it("randomises starts", function test_random_start() {
         const game = create_new_game(function controlled_random() {
             return 0;
+        });
+        const first_barrier = game.barriers[0];
+        const barrier_game = Object.assign({}, game, {
+            current_player: PLAYER_KING
         });
 
         assert.equal(game.thief.row, 7);
@@ -53,26 +58,41 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         assert.equal(game.exit.column, 0);
         assert.equal(game.king.column, 1);
         assert.equal(game.barriers.length, 2);
-        assert.equal(game.board[game.barriers[0].row][game.barriers[0].column], BARRIER);
-        assert.equal(is_valid_barrier_placement({
-            ...game,
-            current_player: PLAYER_KING
-        }, game.thief), false);
+        assert.equal(
+            game.board[first_barrier.row][first_barrier.column],
+            BARRIER
+        );
+        assert.equal(
+            is_valid_barrier_placement(barrier_game, game.thief),
+            false
+        );
     });
 
     it("validates basic thief movement", function test_movement() {
         const board = create_empty_board();
 
         assert.equal(
-            is_valid_sneak_move(board, {row: 4, column: 4}, {row: 3, column: 4}),
+            is_valid_sneak_move(
+                board,
+                {row: 4, column: 4},
+                {row: 3, column: 4}
+            ),
             true
         );
         assert.equal(
-            is_valid_knight_move(board, {row: 4, column: 4}, {row: 2, column: 5}),
+            is_valid_knight_move(
+                board,
+                {row: 4, column: 4},
+                {row: 2, column: 5}
+            ),
             true
         );
         assert.equal(
-            is_valid_bishop_move(board, {row: 4, column: 4}, {row: 1, column: 1}),
+            is_valid_bishop_move(
+                board,
+                {row: 4, column: 4},
+                {row: 1, column: 1}
+            ),
             true
         );
         assert.equal(
@@ -80,7 +100,11 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
             true
         );
         assert.equal(
-            is_valid_queen_move(board, {row: 4, column: 4}, {row: 0, column: 4}),
+            is_valid_queen_move(
+                board,
+                {row: 4, column: 4},
+                {row: 0, column: 4}
+            ),
             true
         );
     });
@@ -100,7 +124,7 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         );
     });
 
-    it("blocks sliding moves through the king", function test_king_blocks_path() {
+    it("blocks king paths", function test_king_blocks_path() {
         const board = create_empty_board();
 
         board[4][5] = KING;
@@ -115,26 +139,27 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
         );
     });
 
-    it("places legal barriers and rejects occupied squares", function test_barrier() {
-        const game = {
-            ...create_new_game(function first_roll() {
-                return 0;
-            }),
+    it("places legal barriers", function test_barrier() {
+        const game = Object.assign({}, create_new_game(function first_roll() {
+            return 0;
+        }), {
             current_player: PLAYER_KING
-        };
+        });
 
-        assert.equal(place_barrier(game, game.thief.row, game.thief.column), null);
+        assert.equal(
+            place_barrier(game, game.thief.row, game.thief.column),
+            null
+        );
         assert.notEqual(place_barrier(game, 1, 1), null);
     });
 
-    it("checks legal squares for board highlights", function test_highlight_rules() {
+    it("checks legal highlight squares", function test_highlight_rules() {
         const game = create_new_game(function queen_roll() {
             return 0.99;
         });
-        const king_game = {
-            ...game,
+        const king_game = Object.assign({}, game, {
             current_player: PLAYER_KING
-        };
+        });
         const valid_queen_target = {
             row: game.thief.row - 4,
             column: game.thief.column
@@ -149,7 +174,12 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
             true
         );
         assert.equal(
-            is_valid_thief_move(game, "queen", game.thief, invalid_queen_target),
+            is_valid_thief_move(
+                game,
+                "queen",
+                game.thief,
+                invalid_queen_target
+            ),
             false
         );
         assert.equal(
@@ -159,20 +189,21 @@ describe("Chess Thieves rules", function describe_chess_thieves() {
             ),
             true
         );
-        assert.equal(is_valid_barrier_placement(king_game, {row: 1, column: 1}), true);
+        assert.equal(
+            is_valid_barrier_placement(king_game, {row: 1, column: 1}),
+            true
+        );
         assert.equal(is_valid_barrier_placement(king_game, game.thief), false);
     });
 
     it("detects both win conditions", function test_winners() {
         const base_game = create_new_game();
-        const thief_game = {
-            ...base_game,
+        const thief_game = Object.assign({}, base_game, {
             thief: base_game.exit
-        };
-        const king_game = {
-            ...base_game,
+        });
+        const king_game = Object.assign({}, base_game, {
             king: base_game.thief
-        };
+        });
 
         assert.equal(check_winner(thief_game), PLAYER_THIEF);
         assert.equal(check_winner(king_game), PLAYER_KING);
