@@ -1,3 +1,9 @@
+#Peer review stuff
+I just wanna know if the game rules make sense cause it's a semi original game, and if some of my code is redundant 
+too. Also my generate docs doesn't work so if you spot what I could have potentially accidentally deleted that would
+be nice Thanks!
+
+
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/H6lPFq0J)
 # Computing 2 Coursework Submission.
 **CID**: [02613317]
