@@ -23,10 +23,13 @@ import {
 
 const RESULT_DISPLAY_TIME = 900;
 const ROLLING_ANIMATION_TIME = 2000;
+const WIN_POSTER_DISPLAY_TIME = 5500;
 const TURN_TIME_LIMIT = 20;
 const MUSIC_SRC = "assets/audio/Sneaky Snooper - Audionautix.mp3";
 const DICE_STATIONARY_IMAGE = "assets/images/dice_stationary_image.png";
 const DICE_ROLL_GIF = "assets/video/dice_roll.gif";
+const THIEF_WIN_VIDEO = "assets/video/escaped.mp4";
+const KING_WIN_VIDEO = "assets/video/arrested.mp4";
 
 const rollResultImageByMoveType = {
     bishop: "assets/images/roll-results/bishop.png",
@@ -131,6 +134,7 @@ let isDiceAnimationPlaying = false;
 let pendingRolledMoveType = null;
 let diceAnimationTimer = null;
 let diceResultTimer = null;
+let win_poster_timer = null;
 let pending_glide = null;
 let celebration_shown = false;
 let intro_index = 0;
@@ -183,7 +187,8 @@ let screen_reader_dice_text;
 let choose_king_move;
 let choose_barrier;
 let animate_piece_glide;
-let trigger_win_celebration;
+let trigger_win_poster;
+let clear_win_poster;
 let maybe_celebrate;
 let prefers_reduced_motion;
 let show_intro;
@@ -208,8 +213,7 @@ let wood_knock;
 let sound_move;
 let sound_barrier;
 let sound_dice;
-let sound_escape;
-let sound_capture;
+let sound_poster_thump;
 let sound_timeout;
 let sound_tick;
 let start_music;
@@ -595,6 +599,7 @@ restart_game = function restart_game() {
     pendingRolledMoveType = null;
     pending_glide = null;
     celebration_shown = false;
+    clear_win_poster();
     turn_seconds_left = TURN_TIME_LIMIT;
     last_turn_key = "";
     clear_dice_result_timer();
@@ -912,19 +917,6 @@ square_class = function square_class(row, column, label, legal_action) {
         classes.push("legal-barrier");
     }
 
-    const thief_won_here = (
-        game.winner === PLAYER_THIEF
-        && (label === "Thief" || label === "Thief at the Exit")
-    );
-    const king_won_here = (
-        game.winner === PLAYER_KING
-        && (label === "King" || label === "King caught the Thief")
-    );
-
-    if (thief_won_here || king_won_here) {
-        classes.push("winner");
-    }
-
     return classes.join(" ");
 };
 
@@ -1193,58 +1185,78 @@ animate_piece_glide = function animate_piece_glide(glide) {
 };
 
 /**
- * Drops a short burst of themed confetti over the board.
+ * Removes any win poster currently shown over the board.
  * @returns {undefined}
  */
-trigger_win_celebration = function trigger_win_celebration() {
-    if (prefers_reduced_motion()) {
-        return;
+clear_win_poster = function clear_win_poster() {
+    const layer = document.querySelector(".win-poster-layer");
+
+    if (win_poster_timer !== null) {
+        clearTimeout(win_poster_timer);
+        win_poster_timer = null;
     }
 
+    if (layer !== null) {
+        layer.remove();
+    }
+};
+
+/**
+ * Shows the matching win poster video over the board.
+ * @returns {undefined}
+ */
+trigger_win_poster = function trigger_win_poster() {
     const board_area = document.querySelector(".board-area");
+    const layer = document.createElement("div");
+    const video = document.createElement("video");
+    const source = (
+        game.winner === PLAYER_THIEF
+        ? THIEF_WIN_VIDEO
+        : KING_WIN_VIDEO
+    );
 
     if (board_area === null) {
         return;
     }
 
-    const colors = [
-        "#e08a1e",
-        "#117a8b",
-        "#2e8b3d",
-        "#f0e442",
-        "#56b4e9",
-        "#cc79a7"
-    ];
-    const piece_count = 18;
-    const layer = document.createElement("div");
-    let index = 0;
+    clear_win_poster();
 
-    layer.className = "confetti-layer";
+    layer.className = "win-poster-layer";
     layer.setAttribute("aria-hidden", "true");
+    const board_rect = board_area.getBoundingClientRect();
+    const poster_size = Math.min(board_rect.width * 0.64, 462);
 
-    while (index < piece_count) {
-        const piece = document.createElement("span");
+    video.className = "win-poster-video";
+    video.src = source;
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.style.left = String(board_rect.left + board_rect.width / 2) + "px";
+    video.style.top = String(board_rect.top + board_rect.height / 2) + "px";
+    video.style.maxWidth = String(board_rect.width * 0.75) + "px";
+    video.style.maxHeight = String(board_rect.height * 0.75) + "px";
+    video.style.width = String(poster_size) + "px";
 
-        piece.className = "confetti-piece";
-        piece.style.left = String(Math.random() * 100) + "%";
-        piece.style.background = colors[index % colors.length];
-        piece.style.animationDelay = String(Math.random() * 250) + "ms";
-        piece.style.setProperty(
-            "--confetti-x",
-            String(Math.random() * 160 - 80) + "px"
-        );
-        piece.style.setProperty(
-            "--confetti-rot",
-            String(Math.random() * 720 - 360) + "deg"
-        );
-        layer.append(piece);
-        index += 1;
-    }
+    layer.append(video);
+    document.body.append(layer);
 
-    board_area.append(layer);
-    setTimeout(function remove_layer() {
+    video.addEventListener("ended", function hide_finished_poster() {
+        layer.classList.add("is-leaving");
+        win_poster_timer = setTimeout(function remove_finished_poster() {
+            layer.remove();
+            win_poster_timer = null;
+        }, 250);
+    }, {once: true});
+
+    video.play().catch(function ignore_autoplay_block() {
+        return undefined;
+    });
+
+    win_poster_timer = setTimeout(function remove_poster() {
         layer.remove();
-    }, 1900);
+        win_poster_timer = null;
+    }, WIN_POSTER_DISPLAY_TIME);
 };
 
 /**
@@ -1254,18 +1266,8 @@ trigger_win_celebration = function trigger_win_celebration() {
 maybe_celebrate = function maybe_celebrate() {
     if (game.winner !== null && !celebration_shown) {
         celebration_shown = true;
-        trigger_win_celebration();
-
-        if (game.winner === PLAYER_THIEF) {
-            sound_escape();
-        } else if (
-            game.king.row === game.thief.row
-            && game.king.column === game.thief.column
-        ) {
-            sound_capture();
-        } else {
-            sound_timeout();
-        }
+        trigger_win_poster();
+        sound_poster_thump();
     }
 };
 
@@ -1747,31 +1749,28 @@ sound_dice = function sound_dice() {
 };
 
 /**
- * Plays a rising fanfare for the thief reaching the exit.
+ * Plays a heavy thump when the win poster lands.
  * @returns {undefined}
  */
-sound_escape = function sound_escape() {
-    const notes = [523, 659, 784, 1047];
-    let i = 0;
+sound_poster_thump = function sound_poster_thump() {
+    const ctx = ensure_audio();
 
-    while (i < notes.length) {
-        play_tone(notes[i], 0.2, "sine", 0.32, i * 0.12);
-        i += 1;
+    if (ctx === null) {
+        return;
     }
-};
 
-/**
- * Plays a falling sting for the king catching the thief.
- * @returns {undefined}
- */
-sound_capture = function sound_capture() {
-    const notes = [392, 294, 196];
-    let i = 0;
+    const start = ctx.currentTime + 0.1;
+    const out = ctx.createGain();
+    const low = ctx.createBiquadFilter();
 
-    while (i < notes.length) {
-        play_tone(notes[i], 0.22, "sawtooth", 0.32, i * 0.1);
-        i += 1;
-    }
+    out.gain.value = 2.8;
+    low.type = "lowpass";
+    low.frequency.value = 900;
+    out.connect(low);
+    low.connect(ctx.destination);
+
+    wood_knock(start, 1.15, 95, out);
+    play_tone(72, 0.18, "sine", 0.28, 0.1);
 };
 
 /**

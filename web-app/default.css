@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap");
+
 /* variables */
 :root {
     --color-page: #0b1020;
@@ -40,6 +42,10 @@
     --font-size-x-large: 22px;
     --font-size-title: 38px;
     --font-size-clock: clamp(40px, 6vmin, 60px);
+
+    --font-body: "IM Fell English", Georgia, serif;
+    --font-heading: "IM Fell English", Georgia, serif;
+    --font-mono: "SF Mono", "Roboto Mono", "Consolas", ui-monospace, monospace;
 
     --line-height-readable: 1.45;
     --border-width-thin: 1px;
@@ -84,7 +90,7 @@
 body {
     background: var(--color-page);
     color: var(--color-text);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--font-body);
     margin: 0;
 }
 
@@ -114,9 +120,15 @@ p {
     margin: 0;
 }
 
+h1,
+h2 {
+    font-family: var(--font-heading);
+}
+
 h1 {
     color: var(--color-gold);
     font-size: var(--font-size-title);
+    font-weight: 700;
 }
 
 header p {
@@ -193,8 +205,10 @@ header p {
 .board-area {
     aspect-ratio: 1 / 1;
     display: grid;
+    isolation: isolate;
     max-height: calc(100svh - var(--safe-screen-padding));
     max-width: 100%;
+    overflow: hidden;
     place-items: center;
     position: relative;
     width: var(--board-size);
@@ -211,7 +225,9 @@ header p {
     height: 100%;
     max-height: 100%;
     max-width: 100%;
+    position: relative;
     width: 100%;
+    z-index: 1;
 }
 
 .game-board tbody,
@@ -438,7 +454,7 @@ button[aria-pressed="true"] {
 
 .timer-time {
     color: var(--color-white);
-    font-family: "SF Mono", "Roboto Mono", "Consolas", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--font-size-clock);
     font-variant-numeric: tabular-nums;
     font-weight: 700;
@@ -511,11 +527,13 @@ button[aria-pressed="true"] {
 .dice-stage {
     align-items: center;
     display: flex;
+    height: 100%;
     inset: 0;
     justify-content: center;
     pointer-events: none;
     position: absolute;
-    z-index: 9;
+    width: 100%;
+    z-index: 40;
 }
 
 .dice-roll-gif,
@@ -623,56 +641,31 @@ button:not(:disabled):active {
     }
 }
 
-/* winning piece celebration */
-.square.winner {
-    animation: win-glow 1.1s ease-in-out infinite;
-    z-index: 4;
-}
-
-@keyframes win-glow {
-    0%,
-    100% {
-        box-shadow: 0 0 var(--spacing-small) var(--color-gold);
-        transform: scale(1);
-    }
-
-    50% {
-        box-shadow:
-            0 0 var(--spacing-large) var(--color-gold),
-            0 0 var(--spacing-x-large) var(--color-gold);
-        transform: scale(1.08);
-    }
-}
-
-.confetti-layer {
+/* win poster */
+.win-poster-layer {
     inset: 0;
-    overflow: hidden;
     pointer-events: none;
-    position: absolute;
-    z-index: 20;
+    position: fixed;
+    z-index: 1000;
 }
 
-.confetti-piece {
-    animation: confetti-fall 1.5s ease-in forwards;
-    border-radius: var(--border-radius-small);
-    height: 12px;
-    left: 50%;
-    position: absolute;
-    top: -10%;
-    width: 9px;
+.win-poster-video {
+    border: var(--border-width-thick) solid var(--color-black);
+    display: block;
+    height: auto;
+    object-fit: contain;
+    position: fixed;
+    transform: translate(-50%, -50%);
+    z-index: 1001;
 }
 
-@keyframes confetti-fall {
-    0% {
-        opacity: 1;
-        top: -10%;
-        transform: translateX(0) rotate(0deg);
-    }
+.win-poster-layer.is-leaving .win-poster-video {
+    animation: poster-fade-out 220ms ease-in both;
+}
 
+@keyframes poster-fade-out {
     100% {
         opacity: 0;
-        top: 110%;
-        transform: translateX(var(--confetti-x, 0)) rotate(var(--confetti-rot, 360deg));
     }
 }
 
@@ -683,8 +676,8 @@ button:not(:disabled):active {
     button,
     .dice-button img,
     .dice-result-image,
+    .win-poster-video,
     .square.legal-move::after,
-    .square.winner,
     .timer.is-low {
         animation: none !important;
         transition: none !important;
