@@ -1206,8 +1206,8 @@ clear_win_poster = function clear_win_poster() {
  * @returns {undefined}
  */
 trigger_win_poster = function trigger_win_poster() {
-    const board_area = document.querySelector(".board-area");
     const layer = document.createElement("div");
+    const frame = document.createElement("div");
     const video = document.createElement("video");
     const source = (
         game.winner === PLAYER_THIEF
@@ -1215,7 +1215,7 @@ trigger_win_poster = function trigger_win_poster() {
         : KING_WIN_VIDEO
     );
 
-    if (board_area === null) {
+    if (board_element === null) {
         return;
     }
 
@@ -1223,8 +1223,14 @@ trigger_win_poster = function trigger_win_poster() {
 
     layer.className = "win-poster-layer";
     layer.setAttribute("aria-hidden", "true");
-    const board_rect = board_area.getBoundingClientRect();
+    const board_rect = board_element.getBoundingClientRect();
     const poster_size = Math.min(board_rect.width * 0.64, 462);
+
+    frame.className = "win-poster-frame";
+    frame.style.maxWidth = String(board_rect.width * 0.75) + "px";
+    frame.style.maxHeight = String(board_rect.height * 0.75) + "px";
+    frame.style.visibility = "hidden";
+    frame.style.width = String(poster_size) + "px";
 
     video.className = "win-poster-video";
     video.src = source;
@@ -1232,13 +1238,36 @@ trigger_win_poster = function trigger_win_poster() {
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
-    video.style.left = String(board_rect.left + board_rect.width / 2) + "px";
-    video.style.top = String(board_rect.top + board_rect.height / 2) + "px";
-    video.style.maxWidth = String(board_rect.width * 0.75) + "px";
-    video.style.maxHeight = String(board_rect.height * 0.75) + "px";
-    video.style.width = String(poster_size) + "px";
 
-    layer.append(video);
+    video.addEventListener("loadedmetadata", function centre_loaded_poster() {
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            return;
+        }
+
+        const ratio = video.videoHeight / video.videoWidth;
+        const border_width = 8;
+        const frame_width = Math.min(
+            poster_size,
+            board_rect.width * 0.75,
+            (board_rect.height * 0.75) / ratio
+        );
+        const frame_height = frame_width * ratio;
+
+        frame.style.width = String(frame_width) + "px";
+        frame.style.removeProperty("height");
+        frame.style.left = String(
+            board_rect.left
+            + (board_rect.width - frame_width - border_width * 2) / 2
+        ) + "px";
+        frame.style.top = String(
+            board_rect.top
+            + (board_rect.height - frame_height - border_width * 2) / 2
+        ) + "px";
+        frame.style.visibility = "visible";
+    }, {once: true});
+
+    frame.append(video);
+    layer.append(frame);
     document.body.append(layer);
 
     video.addEventListener("ended", function hide_finished_poster() {

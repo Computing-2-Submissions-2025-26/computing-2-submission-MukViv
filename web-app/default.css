@@ -649,17 +649,22 @@ button:not(:disabled):active {
     z-index: 1000;
 }
 
-.win-poster-video {
-    border: var(--border-width-thick) solid var(--color-black);
-    display: block;
-    height: auto;
-    object-fit: contain;
+.win-poster-frame {
+    border: calc(var(--border-width-thick) * 2) solid var(--color-black);
+    box-sizing: content-box;
+    line-height: 0;
     position: fixed;
-    transform: translate(-50%, -50%);
     z-index: 1001;
 }
 
-.win-poster-layer.is-leaving .win-poster-video {
+.win-poster-video {
+    display: block;
+    height: auto;
+    object-fit: contain;
+    width: 100%;
+}
+
+.win-poster-layer.is-leaving .win-poster-frame {
     animation: poster-fade-out 220ms ease-in both;
 }
 
@@ -676,7 +681,7 @@ button:not(:disabled):active {
     button,
     .dice-button img,
     .dice-result-image,
-    .win-poster-video,
+    .win-poster-frame,
     .square.legal-move::after,
     .timer.is-low {
         animation: none !important;
