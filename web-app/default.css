@@ -1,30 +1,31 @@
 /* variables */
 :root {
-    --color-page: #000000;
-    --color-panel: #1d2630;
-    --color-panel-border: #617082;
-    --color-header: #251b31;
-    --color-gold: #ffe59d;
-    --color-gold-dark: #d6a83a;
-    --color-light-square: #cbd5e1;
-    --color-dark-square: #475569;
-    --color-text: #f9f4df;
-    --color-black: #000000;
+    --color-page: #0b1020;
+    --color-panel: #111827;
+    --color-panel-border: #64748b;
+    --color-header: #172033;
+    --color-gold: #f6c453;
+    --color-gold-dark: #9a6a2f;
+    --color-light-square: #f0d3a4;
+    --color-dark-square: #5b331b;
+    --color-text: #fff7ed;
+    --color-black: #1c1209;
     --color-white: #ffffff;
-    --color-muted: #6e7378;
-    --color-thief: #117a8b;
-    --color-king: #e08a1e;
-    --color-exit: #2e8b3d;
-    --color-barrier: #0f172a;
-    --color-cursor: #cc79a7;
-    --color-timer-low: #d55e00;
-    --color-clock-bg: #1a1a1a;
-    --color-legal-move: #8b5cf6;
-    --color-legal-move-glow: rgba(139, 92, 246, 0.7);
-    --color-legal-move-fill: rgba(139, 92, 246, 0.22);
-    --color-legal-barrier: #f6c85f;
-    --color-legal-barrier-glow: rgba(246, 200, 95, 0.38);
-    --color-legal-barrier-fill: rgba(246, 200, 95, 0.12);
+    --color-muted: #cbd5e1;
+    --color-thief: #0f6f68;
+    --color-king: #16723b;
+    --color-exit: #0f172a;
+    --color-barrier: #3b2a1c;
+    --color-cursor: #38bdf8;
+    --color-timer-low: #7f1d1d;
+    --color-timer-low-border: #fecaca;
+    --color-clock-bg: #120b07;
+    --color-legal-move: #6366f1;
+    --color-legal-move-glow: rgba(99, 102, 241, 0.65);
+    --color-legal-move-fill: rgba(99, 102, 241, 0.34);
+    --color-legal-barrier: #f59e0b;
+    --color-legal-barrier-glow: rgba(245, 158, 11, 0.42);
+    --color-legal-barrier-fill: rgba(245, 158, 11, 0.13);
 
     --spacing-tiny: 2px;
     --spacing-x-small: 4px;
@@ -226,8 +227,12 @@ header p {
 
 .square {
     align-items: center;
-    border: var(--border-width-thin) solid var(--color-page);
-    border-radius: 0;
+    border: var(--border-width-thin) solid rgba(28, 18, 9, 0.38);
+    border-radius: var(--border-radius-small);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -2px 0 rgba(28, 18, 9, 0.22),
+        0 2px 4px rgba(0, 0, 0, 0.28);
     color: var(--color-white);
     cursor: pointer;
     display: flex;
@@ -241,7 +246,7 @@ header p {
     padding: var(--spacing-x-small);
     position: relative;
     text-align: center;
-    transition: transform 120ms ease, filter 120ms ease;
+    transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
     width: 100%;
 }
 
@@ -276,21 +281,23 @@ header p {
     border: var(--border-width-medium) solid var(--color-legal-move);
     box-shadow:
         0 0 0 var(--border-width-medium) rgba(0, 0, 0, 0.45),
+        inset 0 0 0 var(--border-width-medium) rgba(255, 255, 255, 0.32),
         inset 0 0 var(--spacing-small) var(--color-legal-move-glow),
         0 0 var(--spacing-medium) var(--color-legal-move-glow);
 }
 
 .square.legal-barrier:hover,
 .square.legal-barrier:focus-visible {
-    box-shadow: inset 0 0 0 var(--border-width-thick) var(--color-legal-barrier);
+    box-shadow:
+        inset 0 0 0 var(--border-width-thick) var(--color-legal-barrier),
+        0 2px 4px rgba(0, 0, 0, 0.28);
     filter: brightness(1.08);
 }
 
-/* Robber (thief) move squares glow violet; King move squares glow blue. */
 .square.legal-move-king {
-    --color-legal-move: #2563eb;
-    --color-legal-move-glow: rgba(37, 99, 235, 0.7);
-    --color-legal-move-fill: rgba(37, 99, 235, 0.22);
+    --color-legal-move: #6366f1;
+    --color-legal-move-glow: rgba(99, 102, 241, 0.65);
+    --color-legal-move-fill: rgba(99, 102, 241, 0.34);
 }
 
 .square.light {
@@ -311,16 +318,21 @@ header p {
 .square.king,
 .square.king-caught-the-thief {
     background: var(--color-king);
-    color: var(--color-black);
+    color: var(--color-white);
 }
 
 .square.exit {
     background: var(--color-exit);
-    color: var(--color-black);
+    color: var(--color-white);
 }
 
 .square.barrier {
+    background: var(--color-barrier);
     color: var(--color-white);
+}
+
+.square.police-car {
+    background: var(--color-barrier);
 }
 
 .square.cursor {
@@ -342,7 +354,7 @@ header p {
 
 button {
     background: var(--color-gold);
-    border: var(--border-width-medium) solid var(--color-black);
+    border: var(--border-width-medium) solid var(--color-gold-dark);
     border-radius: var(--border-radius-medium);
     color: var(--color-black);
     font-size: var(--font-size-medium);
@@ -436,22 +448,24 @@ button[aria-pressed="true"] {
 .timer.is-low {
     animation: timer-flash 1s ease-in-out infinite;
     background: var(--color-timer-low);
-    border-color: var(--color-timer-low);
+    border-color: var(--color-timer-low-border);
 }
 
 .timer.is-low .timer-label,
 .timer.is-low .timer-time {
-    color: var(--color-black);
+    color: var(--color-text);
 }
 
 @keyframes timer-flash {
     0%,
     100% {
-        opacity: 1;
+        box-shadow: 0 0 0 rgba(254, 202, 202, 0);
     }
 
     50% {
-        opacity: 0.45;
+        box-shadow:
+            0 0 var(--spacing-medium) rgba(254, 202, 202, 0.7),
+            inset 0 0 0 var(--border-width-medium) rgba(254, 202, 202, 0.75);
     }
 }
 
@@ -549,13 +563,20 @@ button[aria-pressed="true"] {
 .square:focus-visible,
 button:focus-visible,
 .dice-button:focus-visible {
-    background: var(--color-white);
-    outline: var(--focus-width) solid var(--color-white);
+    outline: var(--focus-width) solid var(--color-cursor);
     outline-offset: var(--spacing-x-small);
 }
 
 .square:focus-visible {
+    box-shadow:
+        inset 0 0 0 var(--border-width-thick) var(--color-cursor),
+        0 0 var(--spacing-medium) rgba(56, 189, 248, 0.65),
+        0 2px 4px rgba(0, 0, 0, 0.28);
     outline-offset: calc(-1 * var(--spacing-small));
+}
+
+button:focus-visible {
+    background: var(--color-gold);
 }
 
 .dice-button:focus-visible {

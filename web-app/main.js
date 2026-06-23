@@ -146,6 +146,7 @@ let render_status;
 let render_dice_button;
 let should_show_dice_button;
 let select_square;
+let focus_square;
 let play_selected_square;
 let move_cursor;
 let handle_keydown;
@@ -265,13 +266,10 @@ render_board = function render_board() {
                 + ": " + display_label + legal_label(legal_action)
             );
             square.title = display_label + legal_label(legal_action);
-            square.tabIndex = (
-                square_is_cursor(row, column)
-                ? 0
-                : -1
-            );
+            square.tabIndex = 0;
             add_square_content(square, label);
             square.addEventListener("click", select_square);
+            square.addEventListener("focus", focus_square);
 
             td.append(square);
             tr.append(td);
@@ -335,10 +333,15 @@ render_status = function render_status() {
     move_button.setAttribute("aria-keyshortcuts", "K");
     barrier_button.setAttribute("aria-keyshortcuts", "P");
     skip_turn_button.setAttribute("aria-keyshortcuts", "L");
-    move_button.setAttribute("aria-pressed", String(king_action === "move"));
+    restart_button.setAttribute("aria-keyshortcuts", "N");
+    how_to_play_button.setAttribute("aria-keyshortcuts", "H");
+    move_button.setAttribute(
+        "aria-pressed",
+        String(!disable_king_controls && king_action === "move")
+    );
     barrier_button.setAttribute(
         "aria-pressed",
-        String(king_action === "barrier")
+        String(!disable_king_controls && king_action === "barrier")
     );
 
     if (winner === PLAYER_THIEF) {
@@ -390,6 +393,18 @@ select_square = function select_square(event) {
 };
 
 /**
+ * Keeps the keyboard cursor synced with the focused board square.
+ * @param {Event} event The focus event.
+ * @returns {undefined}
+ */
+focus_square = function focus_square(event) {
+    cursor = {
+        row: Number(event.currentTarget.dataset.row),
+        column: Number(event.currentTarget.dataset.column)
+    };
+};
+
+/**
  * Applies the current player's action to the selected square.
  * @param {number} row The selected row.
  * @param {number} column The selected column.
@@ -419,7 +434,7 @@ play_selected_square = function play_selected_square(row, column) {
     }
 
     if (next_game === null) {
-        message_element.textContent = invalid_message();
+        message_element.textContent = invalid_message(row, column);
     } else {
         const moved_piece = (
             game.current_player === PLAYER_THIEF
@@ -477,6 +492,13 @@ move_cursor = function move_cursor(row_change, column_change) {
  */
 handle_keydown = function handle_keydown(event) {
     const key = event.key.toLowerCase();
+    const target = event.target;
+    const focused_square = (
+        target !== null
+        && target.dataset !== undefined
+        && target.dataset.row !== undefined
+        && target.dataset.column !== undefined
+    );
 
     if (event.key === "ArrowUp" || key === "w") {
         event.preventDefault();
@@ -492,7 +514,14 @@ handle_keydown = function handle_keydown(event) {
         move_cursor(0, 1);
     } else if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        play_selected_square(cursor.row, cursor.column);
+        if (focused_square) {
+            play_selected_square(
+                Number(target.dataset.row),
+                Number(target.dataset.column)
+            );
+        } else {
+            play_selected_square(cursor.row, cursor.column);
+        }
     } else if (key === "r") {
         event.preventDefault();
         handleDiceRollRequest();
@@ -515,6 +544,12 @@ handle_global_shortcuts = function handle_global_shortcuts(event) {
     if (key === "r") {
         event.preventDefault();
         handleDiceRollRequest();
+    } else if (key === "n") {
+        event.preventDefault();
+        restart_game();
+    } else if (key === "h") {
+        event.preventDefault();
+        show_intro();
     } else if (key === "l" && can_skip_turn()) {
         event.preventDefault();
         skip_turn();
@@ -738,10 +773,19 @@ focus_cursor_square = function focus_cursor_square() {
 
 /**
  * Builds the message shown when a player selects an illegal square.
+ * @param {number} row The row the player attempted to move to.
+ * @param {number} column The column the player attempted to move to.
  * @returns {string} A message explaining why the selected action failed.
  */
-invalid_message = function invalid_message() {
+invalid_message = function invalid_message(row, column) {
     if (game.current_player === PLAYER_THIEF) {
+        if (
+            row === game.king.row
+            && column === game.king.column
+        ) {
+            return "Are you trying to get caught or something?";
+        }
+
         return "That square is not legal for the current thief move.";
     }
 
@@ -1075,7 +1119,9 @@ choose_king_move = function choose_king_move() {
  */
 choose_barrier = function choose_barrier() {
     king_action = "barrier";
-    message_element.textContent = "King action: choose an empty square for a police car.";
+    message_element.textContent = (
+        "King action: choose an empty square for a police car."
+    );
     render();
     focus_cursor_square();
 };
@@ -1688,7 +1734,10 @@ sound_dice = function sound_dice() {
 
     while (i < knocks) {
         const frac = i / knocks;
-        const gain = 0.9 * (0.3 + 0.7 * (1 - frac)) * (0.8 + Math.random() * 0.4);
+        const gain = (
+            0.9 * (0.3 + 0.7 * (1 - frac))
+            * (0.8 + Math.random() * 0.4)
+        );
         const base = 250 * (0.85 + Math.random() * 0.3);
 
         wood_knock(t, gain, base, out);

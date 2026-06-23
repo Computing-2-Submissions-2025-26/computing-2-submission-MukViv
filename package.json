@@ -6,7 +6,7 @@
   "main": "web-app/game-logic.js",
   "scripts": {
     "docs": "jsdoc -c jsdoc.json",
-    "test": "node --test web-app/tests/*.test.js"
+    "test": "mocha"
   },
   "author": "",
   "license": "ISC",
