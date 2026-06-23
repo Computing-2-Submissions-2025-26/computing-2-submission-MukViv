@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Chess Thieves</title>
     <link rel="stylesheet" href="default.css">
-    <link rel="icon" href="./assets/favicon.png">
+    <link rel="icon" href="./assets/images/chess-thieves-crest.svg">
     <script type="module" src="main.js"></script>
 </head>
 <body>
@@ -18,38 +18,45 @@
             aria-hidden="true"
         >
         <h1>Chess Thieves</h1>
+        <a class="docs-link" href="../docs/index.html">API Documentation</a>
         <p>The THIEF tries to reach the EXIT square. The KING blocks the way and tries to catch the thief.</p>
     </header>
     <main class="game-layout">
-        <section class="panel player-guides" aria-label="Player guides">
-            <div class="player-guide" aria-labelledby="thief-title">
-                <h2 id="thief-title">Player 1: Thief</h2>
-                <p>Reach the EXIT square before the King catches you.</p>
-                <ul>
-                    <li>Pawn (but multidirectional): 1 square up, down, left, or right.</li>
-                    <li>Knight: L-shaped chess knight move.</li>
-                    <li>Bishop, rook, queen: up to 4 squares.</li>
-                </ul>
-            </div>
-            <div class="player-guide" aria-labelledby="king-title">
-                <h2 id="king-title">Player 2: King</h2>
-                <p>Block the thief's path and prevent them from reaching the EXIT square, you auto win after 15 turns if they don't escape.</p>
-                <ul>
-                    <li>Use barriers to block the thief's path (max 6 on board).</li>
-                    <li>Move using the king move to block or catch the thief.</li>
-                </ul>
+        <section class="panel controls-panel" aria-label="Game controls">
+            <h2>Controls</h2>
+            <div class="controls">
+                <button
+                    id="dice-button"
+                    class="dice-button is-hidden"
+                    type="button"
+                    aria-label="Roll movement dice"
+                >
+                    <img
+                        id="dice-button-image"
+                        src="assets/images/dice_stationary_image.png"
+                        alt=""
+                        aria-hidden="true"
+                    >
+                    <span>[R]</span>
+                </button>
+                <button id="king-move" type="button" aria-pressed="true">
+                    King Move [K]
+                </button>
+                <button id="king-barrier" type="button" aria-pressed="false">
+                    Police Car [P]
+                </button>
+                <button id="skip-turn" type="button">Skip Turn [L]</button>
             </div>
         </section>
 
-        <section class="board-wrap" aria-labelledby="board-title">
-            <h2 id="board-title">Escape board - I need a name for this</h2>
+        <section class="board-wrap" aria-label="Game board">
             <div class="board-area">
-                <div
+                <table
                     id="board"
                     class="board game-board"
                     role="grid"
                     aria-label="Chess Thieves board"
-                ></div>
+                ></table>
                 <div id="dice-stage" class="dice-stage is-hidden" aria-hidden="true">
                     <img
                         id="dice-roll-image"
@@ -67,50 +74,65 @@
                     >
                 </div>
             </div>
-            <div class="message-row">
-                <p id="message" class="message" aria-live="polite">
-                    Roll the dice thief! Press [R] or click the dice beside this message!
-                </p>
-                <button
-                    id="dice-button"
-                    class="dice-button is-hidden"
-                    type="button"
-                    aria-label="Roll movement dice"
-                >
-                    <img
-                        id="dice-button-image"
-                        src="assets/images/dice_stationary_image.png"
-                        alt=""
-                        aria-hidden="true"
-                    >
-                </button>
-            </div>
-            <div class="controls" aria-label="Game controls">
-                <button id="king-move" type="button" aria-pressed="true">
-                    King Move
-                </button>
-                <button id="king-barrier" type="button" aria-pressed="false">
-                    Place Barrier
-                </button>
-                <button id="restart" type="button">New Game</button>
-            </div>
         </section>
 
         <section class="panel" aria-labelledby="status-title">
             <h2 id="status-title">Game Status</h2>
             <p id="turn"></p>
+            <p id="timer" class="timer"></p>
             <p id="die" class="visually-hidden"></p>
             <p id="barriers"></p>
+            <div class="status-action">
+                <p id="message" class="message" aria-live="polite">
+                    The Thief rolls first.
+                </p>
+            </div>
             <p id="result" class="result" aria-live="polite"></p>
-            <ul>
-                <li>Use Arrow keys or WASD to move the cursor.</li>
-                <li>Use Enter or Space to select a square.</li>
-                <li>Press R to roll during Player 1's roll phase.</li>
-                <li>The King wins after 15 thief turns if the Thief has not escaped.</li>
-            </ul>
+            <div class="utility-controls" aria-label="Game options">
+                <button id="restart" type="button">New Game</button>
+                <button id="how-to-play" type="button">How to Play</button>
+            </div>
         </section>
     </main>
     </div>
     <p id="dice-live" class="visually-hidden" aria-live="polite"></p>
+    <audio id="bg-music" loop preload="none"></audio>
+
+    <div
+        id="intro-overlay"
+        class="intro-overlay is-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="intro-title"
+    >
+        <div class="intro-card">
+            <button
+                id="intro-skip"
+                class="intro-skip"
+                type="button"
+                aria-label="Skip how to play"
+            >&times;</button>
+            <div id="intro-step" class="intro-step">
+                <img
+                    id="intro-icon"
+                    class="intro-icon"
+                    src=""
+                    alt=""
+                    aria-hidden="true"
+                >
+                <h2 id="intro-title" class="intro-title"></h2>
+                <p id="intro-body" class="intro-body"></p>
+            </div>
+            <div id="intro-dots" class="intro-dots" aria-hidden="true"></div>
+            <div class="intro-buttons">
+                <button id="intro-back" class="intro-back" type="button">
+                    Back
+                </button>
+                <button id="intro-next" class="intro-next" type="button">
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

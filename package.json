@@ -3,7 +3,11 @@
   "type": "module",
   "version": "1.0.0",
   "description": "",
-  "main": "web-app/Module.js",
+  "main": "web-app/game-logic.js",
+  "scripts": {
+    "docs": "jsdoc -c jsdoc.json",
+    "test": "node --test web-app/tests/*.test.js"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -11,6 +15,7 @@
   },
   "devDependencies": {
     "docdash": "^2.0.2",
+    "jsdoc": "^4.0.5",
     "jslint": "^0.12.1",
     "mocha": "^11.7.5"
   }

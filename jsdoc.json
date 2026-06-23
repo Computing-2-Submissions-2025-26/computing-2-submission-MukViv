@@ -4,8 +4,7 @@
     },
     "source": {
         "include": [
-            "web-app/ChessThieves.js",
-            "web-app/main.js"
+            "web-app/game-logic.js"
         ],
         "includePattern": "\\.js$",
         "excludePattern": "(node_modules/|docs)"
@@ -17,6 +16,7 @@
         "template": "node_modules/docdash",
         "encoding": "utf8",
         "destination": "docs/",
+        "readme": "docs-home.md",
         "recurse": true,
         "verbose": true
     },
