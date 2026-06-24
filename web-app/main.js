@@ -30,8 +30,6 @@ const DICE_STATIONARY_IMAGE = "assets/images/dice_stationary_image.png";
 const DICE_ROLL_GIF = "assets/video/dice_roll.gif";
 const THIEF_WIN_VIDEO = "assets/video/escaped.mp4";
 const KING_WIN_VIDEO = "assets/video/arrested.mp4";
-const THIEF_WIN_SOUND = "assets/audio/laugh.mp3";
-const KING_WIN_SOUND = "assets/audio/jail-sound.mp3";
 
 const rollResultImageByMoveType = {
     bishop: "assets/images/roll-results/bishop.png",
@@ -216,11 +214,9 @@ let sound_move;
 let sound_barrier;
 let sound_dice;
 let sound_poster_thump;
-let sound_victor;
 let sound_timeout;
 let sound_tick;
 let start_music;
-let stop_music;
 let start_audio;
 
 /**
@@ -613,7 +609,6 @@ restart_game = function restart_game() {
     dice_live_element.textContent = "";
     render();
     focus_cursor_square();
-    start_music();
 };
 
 /**
@@ -1211,6 +1206,7 @@ clear_win_poster = function clear_win_poster() {
  * @returns {undefined}
  */
 trigger_win_poster = function trigger_win_poster() {
+    const board_area = document.querySelector(".board-area");
     const layer = document.createElement("div");
     const frame = document.createElement("div");
     const video = document.createElement("video");
@@ -1220,7 +1216,7 @@ trigger_win_poster = function trigger_win_poster() {
         : KING_WIN_VIDEO
     );
 
-    if (board_element === null) {
+    if (board_area === null) {
         return;
     }
 
@@ -1228,13 +1224,14 @@ trigger_win_poster = function trigger_win_poster() {
 
     layer.className = "win-poster-layer";
     layer.setAttribute("aria-hidden", "true");
-    const board_rect = board_element.getBoundingClientRect();
+    const board_rect = board_area.getBoundingClientRect();
     const poster_size = Math.min(board_rect.width * 0.64, 462);
 
     frame.className = "win-poster-frame";
+    frame.style.left = String(board_rect.left + board_rect.width / 2) + "px";
+    frame.style.top = String(board_rect.top + board_rect.height / 2) + "px";
     frame.style.maxWidth = String(board_rect.width * 0.75) + "px";
     frame.style.maxHeight = String(board_rect.height * 0.75) + "px";
-    frame.style.visibility = "hidden";
     frame.style.width = String(poster_size) + "px";
 
     video.className = "win-poster-video";
@@ -1243,33 +1240,6 @@ trigger_win_poster = function trigger_win_poster() {
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
-
-    video.addEventListener("loadedmetadata", function centre_loaded_poster() {
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-            return;
-        }
-
-        const ratio = video.videoHeight / video.videoWidth;
-        const border_width = 8;
-        const frame_width = Math.min(
-            poster_size,
-            board_rect.width * 0.75,
-            (board_rect.height * 0.75) / ratio
-        );
-        const frame_height = frame_width * ratio;
-
-        frame.style.width = String(frame_width) + "px";
-        frame.style.removeProperty("height");
-        frame.style.left = String(
-            board_rect.left
-            + (board_rect.width - frame_width - border_width * 2) / 2
-        ) + "px";
-        frame.style.top = String(
-            board_rect.top
-            + (board_rect.height - frame_height - border_width * 2) / 2
-        ) + "px";
-        frame.style.visibility = "visible";
-    }, {once: true});
 
     frame.append(video);
     layer.append(frame);
@@ -1300,10 +1270,8 @@ trigger_win_poster = function trigger_win_poster() {
 maybe_celebrate = function maybe_celebrate() {
     if (game.winner !== null && !celebration_shown) {
         celebration_shown = true;
-        stop_music();
         trigger_win_poster();
         sound_poster_thump();
-        sound_victor();
     }
 };
 
@@ -1673,29 +1641,6 @@ sound_barrier = function sound_barrier() {
 };
 
 /**
- * Plays the matching end sound once the victor has been decided.
- * @returns {undefined}
- */
-sound_victor = function sound_victor() {
-    const source = (
-        game.winner === PLAYER_THIEF
-        ? THIEF_WIN_SOUND
-        : KING_WIN_SOUND
-    );
-    const sfx = new Audio(source);
-
-    sfx.volume = 0.75;
-
-    const played = sfx.play();
-
-    if (played !== undefined && typeof played.catch === "function") {
-        played.catch(function ignore_blocked_sound() {
-            return undefined;
-        });
-    }
-};
-
-/**
  * Plays a short rattling dice-roll sound.
  * @returns {undefined}
  */
@@ -1767,7 +1712,7 @@ wood_knock = function wood_knock(start, gain, base, out) {
 };
 
 /**
- * Plays a warm wooden dice-roll: several settling knocks, soft-saturated.
+ * Plays a warm wooden dice-roll: several wooden knock sounds
  * @returns {undefined}
  */
 sound_dice = function sound_dice() {
@@ -1888,25 +1833,12 @@ start_music = function start_music() {
 };
 
 /**
- * Stops the looping background music.
- * @returns {undefined}
- */
-stop_music = function stop_music() {
-    bg_music.pause();
-    bg_music.currentTime = 0;
-    music_enabled = false;
-};
-
-/**
  * Starts all audio systems that are enabled for the game.
  * @returns {undefined}
  */
 start_audio = function start_audio() {
     ensure_audio();
-
-    if (game.winner === null) {
-        start_music();
-    }
+    start_music();
 };
 
 board_element.addEventListener("keydown", handle_keydown);
