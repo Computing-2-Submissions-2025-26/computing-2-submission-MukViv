@@ -1,33 +1,151 @@
 /*jslint module*/
 /**
- * Game rules for Chess Thieves.
+ * Pure rule engine for Chess Thieves.
  *
- * The browser interface imports this module, but this file does not use the
- * DOM. That keeps the rules easy to test from Node or a browser console.
+ * Chess Thieves is played on an 8 by 8 board. The Thief starts on the bottom
+ * row and tries to reach the Exit. The King starts near the top and tries to
+ * catch the Thief or delay the escape until the turn limit is passed. The
+ * browser interface imports this module, but this file does not use the DOM,
+ * so another project can reuse the same functions for a different interface,
+ * a command-line version, or automated tests.
+ *
+ * Public functions never mutate the game object they receive. A successful
+ * action returns a new game state; an illegal action returns null. That means
+ * callers should always replace their saved game state only after checking
+ * that the return value is not null.
+ *
  * @namespace ChessThieves
  */
 const ChessThieves = Object.create(null);
 
+/**
+ * A board coordinate. Row 0 is the top row and column 0 is the left column.
+ * The playable board accepts only integer rows and columns from 0 to 7.
+ * @typedef {object} ChessThieves.Position
+ * @property {number} row The vertical board index, where 0 is the top.
+ * @property {number} column The horizontal board index, where 0 is the left.
+ */
 
+/**
+ * The board array used by the rule engine.
+ *
+ * The first index is the row and the second index is the column, so
+ * `board[2][5]` means row 2, column 5. Each cell contains one exported square
+ * marker: `EMPTY`, `THIEF`, `KING`, `EXIT`, `BARRIER`, or `POLICE_CAR`.
+ * @typedef {string[][]} ChessThieves.Board
+ */
+
+/**
+ * Complete game state for one Chess Thieves match.
+ *
+ * Store the object returned by `create_new_game`, then pass the latest state
+ * into actions such as `set_thief_move`, `move_thief`, `move_king`, and
+ * `place_barrier`. The returned state includes an updated `board` and `winner`
+ * field, so UI code can render directly from it after every accepted action.
+ * @typedef {object} ChessThieves.GameState
+ * @property {ChessThieves.Position} thief Current Thief square.
+ * @property {ChessThieves.Position} king Current King square.
+ * @property {ChessThieves.Position} exit Escape square the Thief must reach.
+ * @property {ChessThieves.Position[]} map_barriers Permanent traffic barriers
+ * randomly placed at setup.
+ * @property {ChessThieves.Position[]} barriers Police cars placed by the King.
+ * @property {string} current_player Either `PLAYER_THIEF` or `PLAYER_KING`.
+ * @property {string|null} thief_move The Thief's current die result, or null
+ * before the Thief has rolled this turn.
+ * @property {number} turn_count Current round number. It starts at 1 and
+ * increases after the King acts or skips.
+ * @property {string|null} winner `PLAYER_THIEF`, `PLAYER_KING`, or null while
+ * the match is still running.
+ * @property {ChessThieves.Board} board Board markers rebuilt from the current
+ * positions, permanent barriers, and placed police cars.
+ */
+
+/**
+ * Number of rows and columns in the square Chess Thieves board.
+ * @memberof ChessThieves
+ * @constant {number}
+ */
 const BOARD_SIZE = 8;
+
+/**
+ * Final round the Thief can use to escape before the King wins by delay.
+ * The King win is triggered when `turn_count` becomes greater than this value.
+ * @memberof ChessThieves
+ * @constant {number}
+ */
 const MAX_TURNS = 15;
+
+/**
+ * Maximum number of police cars the King can place during one match.
+ * @memberof ChessThieves
+ * @constant {number}
+ */
 const MAX_BARRIERS = 6;
 
+/**
+ * Marker for an empty square in `game.board`.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const EMPTY = "empty";
+
+/**
+ * Marker for the Thief's square in `game.board`.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const THIEF = "thief";
+
+/**
+ * Marker for the King's square in `game.board`.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const KING = "king";
+
+/**
+ * Marker for the Exit square in `game.board`.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const EXIT = "exit";
+
+/**
+ * Marker for a permanent starting traffic barrier in `game.board`.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const BARRIER = "barrier";
+
+/**
+ * Marker for a King-placed police car in `game.board`.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const POLICE_CAR = "police_car";
 
+/**
+ * Turn and winner value used when the Thief is active or has escaped.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const PLAYER_THIEF = "thief";
+
+/**
+ * Turn and winner value used when the King is active or has won.
+ * @memberof ChessThieves
+ * @constant {string}
+ */
 const PLAYER_KING = "king";
 
 /**
- * The six possible faces on the thief movement die
- * 33.33% chance of a pawn move, 16.67% chance of every other move type
+ * The six possible faces on the Thief movement die.
+ *
+ * Pawn appears twice, so it has a 2-in-6 chance. Knight, bishop, rook, and
+ * queen each appear once. The strings in this array are the same values that
+ * `roll_thief_die` returns and `set_thief_move` accepts.
  * @memberof ChessThieves
- * @constant
+ * @constant {string[]}
  */
 const thief_move_die = [
     "pawn",
