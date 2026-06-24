@@ -1,17 +1,8 @@
-/*jslint browser*/
+/*jslint browser: true */
 
-/**
- * Builds the controller for the win poster video.
- * @param {object} config Poster timing, players, and video paths.
- * @returns {object} Poster controls.
- */
 function createWinPosterController(config) {
     let win_poster_timer = null;
 
-    /**
-     * Removes any win poster currently shown over the board.
-     * @returns {undefined}
-     */
     function clear_win_poster() {
         const layer = document.querySelector(".win-poster-layer");
 
@@ -25,21 +16,18 @@ function createWinPosterController(config) {
         }
     }
 
-    /**
-     * Shows the matching win poster video over the board.
-     * @param {string} winner The player who won the game.
-     * @returns {undefined}
-     */
     function trigger_win_poster(winner) {
         const board_area = document.querySelector(".board-area");
-        const layer = document.createElement("div");
         const frame = document.createElement("div");
-        const video = document.createElement("video");
+        const layer = document.createElement("div");
         const source = (
             winner === config.player_thief
             ? config.thief_win_video
             : config.king_win_video
         );
+        const video = document.createElement("video");
+        let board_rect;
+        let poster_size;
 
         if (board_area === null) {
             return;
@@ -49,8 +37,8 @@ function createWinPosterController(config) {
 
         layer.className = "win-poster-layer";
         layer.setAttribute("aria-hidden", "true");
-        const board_rect = board_area.getBoundingClientRect();
-        const poster_size = Math.min(board_rect.width * 0.64, 462);
+        board_rect = board_area.getBoundingClientRect();
+        poster_size = Math.min(board_rect.width * 0.64, 462);
 
         frame.className = "win-poster-frame";
         frame.style.maxWidth = String(board_rect.width * 0.75) + "px";
@@ -65,22 +53,29 @@ function createWinPosterController(config) {
         video.playsInline = true;
         video.preload = "auto";
 
-        video.addEventListener("loadedmetadata", function centre_loaded_poster() {
-            if (video.videoWidth === 0 || video.videoHeight === 0) {
-                return;
-            }
+        video.addEventListener(
+            "loadedmetadata",
+            function centre_loaded_poster() {
+                let frame_width;
+                let ratio;
 
-            const ratio = video.videoHeight / video.videoWidth;
-            const frame_width = Math.min(
-                poster_size,
-                board_rect.width * 0.75,
-                (board_rect.height * 0.75) / ratio
-            );
+                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                    return;
+                }
 
-            frame.style.width = String(frame_width) + "px";
-            frame.style.removeProperty("height");
-            frame.style.visibility = "visible";
-        }, {once: true});
+                ratio = video.videoHeight / video.videoWidth;
+                frame_width = Math.min(
+                    poster_size,
+                    board_rect.width * 0.75,
+                    (board_rect.height * 0.75) / ratio
+                );
+
+                frame.style.width = String(frame_width) + "px";
+                frame.style.removeProperty("height");
+                frame.style.visibility = "visible";
+            },
+            {once: true}
+        );
 
         frame.append(video);
         layer.append(frame);
@@ -105,9 +100,9 @@ function createWinPosterController(config) {
     }
 
     return Object.freeze({
-        clear_win_poster,
-        trigger_win_poster
+        clear_win_poster: clear_win_poster,
+        trigger_win_poster: trigger_win_poster
     });
 }
 
-export {createWinPosterController};
+export default Object.freeze(createWinPosterController);

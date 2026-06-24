@@ -159,7 +159,7 @@ h1 {
 .panel {
     align-self: start;
     background: var(--color-panel);
-    border: var(--border-width-medium) solid var(--color-panel-border);
+    border: var(--board-border-width) solid var(--color-panel-border);
     padding: var(--spacing-medium);
 }
 

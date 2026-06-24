@@ -1,18 +1,7 @@
-/*jslint browser*/
-
-/**
- * Builds the browser audio controller for music and sound effects.
- * @param {object} config Audio file paths and DOM nodes.
- * @returns {object} Sound effect and music controls.
- */
+/*jslint browser, module*/
 function createAudioController(config) {
     let audio_context = null;
     let music_enabled = false;
-
-    /**
-     * Lazily creates (and resumes) the Web Audio context for sound effects.
-     * @returns {object|null} The audio context, or null when unavailable.
-     */
     function ensure_audio() {
         if (audio_context === null) {
             const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -36,13 +25,6 @@ function createAudioController(config) {
 
         return audio_context;
     }
-
-    /**
-     * Plays an audio file and ignores browser autoplay rejections.
-     * @param {string} source The audio file path.
-     * @param {number} volume Playback volume from 0 to 1.
-     * @returns {undefined}
-     */
     function play_file_sound(source, volume) {
         const sfx = new Audio(source);
 
@@ -56,16 +38,6 @@ function createAudioController(config) {
             });
         }
     }
-
-    /**
-     * Plays one short synthesised note with a quick fade in and out.
-     * @param {number} freq The pitch in hertz.
-     * @param {number} duration The length in seconds.
-     * @param {string} type The oscillator wave type.
-     * @param {number} gain The peak volume from 0 to 1.
-     * @param {number} delay Seconds to wait before the note starts.
-     * @returns {undefined}
-     */
     function play_tone(freq, duration, type, gain, delay) {
         const ctx = ensure_audio();
 
@@ -87,12 +59,6 @@ function createAudioController(config) {
         osc.start(start);
         osc.stop(start + duration + 0.03);
     }
-
-    /**
-     * Builds a soft-saturation curve used to warm the dice sound.
-     * @param {number} amount How hard to drive the curve.
-     * @returns {Float32Array} The waveshaper curve.
-     */
     function make_shaper_curve(amount) {
         const size = 1024;
         const curve = new Float32Array(size);
@@ -106,15 +72,6 @@ function createAudioController(config) {
 
         return curve;
     }
-
-    /**
-     * Plays one struck-wood "knock" using inharmonic modal resonances.
-     * @param {number} start When the knock starts, in audio time.
-     * @param {number} gain The knock volume.
-     * @param {number} base The base resonance frequency.
-     * @param {object} out The node to connect into.
-     * @returns {undefined}
-     */
     function wood_knock(start, gain, base, out) {
         const ctx = audio_context;
         const length = Math.floor(ctx.sampleRate * 0.005);
@@ -156,28 +113,12 @@ function createAudioController(config) {
             k += 1;
         }
     }
-
-    /**
-     * Plays the chess piece movement sound from file.
-     * @returns {undefined}
-     */
     function sound_move() {
         play_file_sound(config.move_src, 0.6);
     }
-
-    /**
-     * Plays the police car placement sound from file.
-     * @returns {undefined}
-     */
     function sound_barrier() {
         play_file_sound(config.barrier_src, 0.6);
     }
-
-    /**
-     * Plays the matching end sound once the victor has been decided.
-     * @param {string} winner The player who won the game.
-     * @returns {undefined}
-     */
     function sound_victor(winner) {
         play_file_sound(
             (
@@ -188,11 +129,6 @@ function createAudioController(config) {
             0.75
         );
     }
-
-    /**
-     * Plays a warm wooden dice-roll: several settling knocks, soft-saturated.
-     * @returns {undefined}
-     */
     function sound_dice() {
         const ctx = ensure_audio();
 
@@ -229,11 +165,6 @@ function createAudioController(config) {
             i += 1;
         }
     }
-
-    /**
-     * Plays a heavy thump when the win poster lands.
-     * @returns {undefined}
-     */
     function sound_poster_thump() {
         const ctx = ensure_audio();
 
@@ -254,12 +185,6 @@ function createAudioController(config) {
         wood_knock(start, 1.15, 95, out);
         play_tone(72, 0.18, "sine", 0.28, 0.1);
     }
-
-    /**
-     * Plays a clock tick for the final seconds of a turn.
-     * @param {boolean} urgent Whether to use the higher, more urgent pitch.
-     * @returns {undefined}
-     */
     function sound_tick(urgent) {
         play_tone(
             (
@@ -273,11 +198,6 @@ function createAudioController(config) {
             0
         );
     }
-
-    /**
-     * Starts the looping background music when the browser allows playback.
-     * @returns {undefined}
-     */
     function start_music() {
         if (config.music_src === "") {
             return;
@@ -301,22 +221,11 @@ function createAudioController(config) {
             });
         }
     }
-
-    /**
-     * Stops the looping background music.
-     * @returns {undefined}
-     */
     function stop_music() {
         config.bg_music.pause();
         config.bg_music.currentTime = 0;
         music_enabled = false;
     }
-
-    /**
-     * Starts all audio systems that are enabled for the game.
-     * @param {boolean} should_start_music Whether music should start.
-     * @returns {undefined}
-     */
     function start_audio(should_start_music) {
         ensure_audio();
 
