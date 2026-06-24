@@ -1,10 +1,3 @@
-#Peer review stuff
-I just wanna know if the game rules make sense cause it's a semi original game, and if some of my code is redundant 
-too. Also my generate docs doesn't work so if you spot what I could have potentially accidentally deleted that would
-be nice Thanks!
-
-
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/H6lPFq0J)
 # Computing 2 Coursework Submission.
 **CID**: [02613317]
 
@@ -24,51 +17,26 @@ King, placing police cars, skipping turns, and checking the winner.
 The generated API documentation is in `docs/index.html`. The main namespace
 page is `docs/ChessThieves.html`.
 
-## Checklist
-### Install dependencies locally
-This template relies on a a few packages from the Node Package Manager, npm.
-To install them run the following commands in the terminal.
-```properties
-npm install
-```
-These won't be uploaded to your repository because of the `.gitignore`.
-I'll run the same commands when I download your repos.
+### Core Game Loop
 
-### Game Module – API
-*You will produce an API specification, i.e. a list of function names and their signatures, for a Javascript module that represents the state of your game and the operations you can perform on it that advances the game or provides information.*
+1. Start with `create_new_game()`.
+2. On the Thief's turn, call `roll_thief_die()`.
+3. Store that roll with `set_thief_move(game, move_type)`.
+4. Use `is_valid_thief_move(...)` to show legal Thief destinations.
+5. Apply the Thief move with `move_thief(game, row, column)`.
+6. On the King's turn, either use `move_king(...)` or `place_barrier(...)`.
+7. Use `check_winner(game)` or `is_game_ended(game)` after each returned state.
 
-- [ ] Include a `.js ` module file in `/web-app` containing the API using `jsdoc`.
-- [ ] Update `/jsdoc.json` to point to this module in `.source.include` (line 7)
-- [ ] Compile jsdoc using the run configuration `Generate Docs`
-- [ ] Check the generated docs have compiled correctly.
+Most action functions return a new game state when the action is legal and
+`null` when the action breaks a Chess Thieves rule. Keep the old state when a
+function returns `null`.
 
-### Game Module – Implementation
-*You will implement, in Javascript, the module you specified above. Such that your game can be simulated in code, e.g. in the debug console.*
+Vizcom was used to turn brief sketches into coloured images 
+Chat gpt was used to add effects to 
+Claude was used to code the baseline for everything 
 
-- [ ] The file above should be fully implemented.
+Music: "Sneaky Snooper" by Audionautix (audionautix.com)
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
-### Unit Tests – Specification
-*For the Game module API you have produced, write a set of unit tests descriptions that specify the expected behaviour of one aspect of your API, e.g. you might pick the win condition, or how the state changes when a move is made.*
+Sound effects: Pixabay (pixabay.com)
 
-- [ ] Write unit test definitions in `/web-app/tests`.
-- [ ] Check the headings appear in the Testing sidebar.
-
-### Unit Tests – Implementation
-*Implement in code the unit tests specified above.*
-
-- [ ] Implement the tests above.
-
-### Web Application
-*Produce a web application that allows a user to interface with your game module.*
-
-- Implement in `/web-app`
-  - [ ] `index.html`
-  - [ ] `default.css`
-  - [ ] `main.js`
-  - [ ] `game-logic.js`
-  - [ ] Any other files you need to include.
-
-### Finally
-- [ ] Push to GitHub.
-- [ ] Sync the changes.
-- [ ] Check submission on GitHub website.

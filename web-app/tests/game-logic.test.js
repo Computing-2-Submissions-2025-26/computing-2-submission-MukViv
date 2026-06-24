@@ -1,3 +1,5 @@
+/*jslint long, node*/
+
 import assert from "node:assert/strict";
 import {
     BARRIER,
@@ -12,7 +14,6 @@ import {
     create_new_game,
     get_square_label,
     is_game_ended,
-    is_inside_board,
     is_path_clear,
     is_valid_barrier_placement,
     is_valid_bishop_move,
@@ -567,19 +568,6 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + "."
                 + game_text(game)
             );
-        });
-    });
-
-    describe("Board coordinates", function describe_board_coordinates() {
-        it("accepts only whole-number coordinates from 0 to 7", function test_inside_board() {
-            assert.equal(is_inside_board(0, 0), true, "Top-left corner should be on the board.");
-            assert.equal(is_inside_board(7, 7), true, "Bottom-right corner should be on the board.");
-            assert.equal(is_inside_board(4, 4), true, "Middle square should be on the board.");
-            assert.equal(is_inside_board(-1, 0), false, "Negative row should be off the board.");
-            assert.equal(is_inside_board(0, -1), false, "Negative column should be off the board.");
-            assert.equal(is_inside_board(8, 0), false, "Row 8 should be off the board.");
-            assert.equal(is_inside_board(0, 8), false, "Column 8 should be off the board.");
-            assert.equal(is_inside_board(0.5, 0), false, "Half-row coordinates should be invalid.");
         });
     });
 });

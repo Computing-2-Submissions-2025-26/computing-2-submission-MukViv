@@ -1,4 +1,4 @@
-/*jslint browser, module*/
+/*jslint browser*/
 // Music: "Sneaky Snooper" by Audionautix (audionautix.com)
 // Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
@@ -20,6 +20,9 @@ import {
     roll_thief_die,
     set_thief_move
 } from "./game-logic.js";
+import {createAudioController} from "./audio.js";
+import {createIntroController} from "./intro.js";
+import {createWinPosterController} from "./win-poster.js";
 
 const RESULT_DISPLAY_TIME = 900;
 const ROLLING_ANIMATION_TIME = 2000;
@@ -73,58 +76,46 @@ const dice_roll_image = document.querySelector("#dice-roll-image");
 const dice_result_image = document.querySelector("#dice-result-image");
 const dice_live_element = document.querySelector("#dice-live");
 const intro_overlay = document.querySelector("#intro-overlay");
-const intro_step = document.querySelector("#intro-step");
-const intro_icon = document.querySelector("#intro-icon");
-const intro_title = document.querySelector("#intro-title");
-const intro_body = document.querySelector("#intro-body");
+const intro_steps = document.querySelectorAll(".intro-step");
 const intro_dots = document.querySelector("#intro-dots");
 const intro_back = document.querySelector("#intro-back");
 const intro_next = document.querySelector("#intro-next");
 const intro_skip = document.querySelector("#intro-skip");
 
-const INTRO_STEPS = [
-    {
-        icon: "assets/images/chess-thieves-crest.svg",
-        title: "Welcome to Chess Thieves",
-        body: (
-            "The Thief races to reach the EXIT square. "
-            + "The King blocks the way and tries to catch the Thief."
-        )
+const audio_controller = createAudioController({
+    barrier_src: "assets/audio/police.mp3",
+    bg_music,
+    king_win_src: KING_WIN_SOUND,
+    move_src: "assets/audio/chess sound.mp3",
+    music_src: MUSIC_SRC,
+    player_thief: PLAYER_THIEF,
+    thief_win_src: THIEF_WIN_SOUND
+});
+
+const win_poster_controller = createWinPosterController({
+    display_time: WIN_POSTER_DISPLAY_TIME,
+    king_win_video: KING_WIN_VIDEO,
+    player_thief: PLAYER_THIEF,
+    thief_win_video: THIEF_WIN_VIDEO
+});
+
+const intro_controller = createIntroController({
+    elements: {
+        back: intro_back,
+        dots: intro_dots,
+        next: intro_next,
+        overlay: intro_overlay,
+        steps: intro_steps
     },
-    {
-        icon: "assets/images/dice_stationary_image.png",
-        title: "Thief: roll, then move",
-        body: (
-            "Each turn the Thief rolls a die for a move type - pawn (one "
-            + "square in any direction), knight (an L-shape), or bishop, rook, "
-            + "or queen (up to four squares). Then move onto a glowing square."
-        )
+    on_close: function intro_closed() {
+        start_audio();
+        render_timer();
+        focus_cursor_square();
     },
-    {
-        icon: "assets/characters/king.png",
-        title: "King: block or chase",
-        body: (
-            "The King moves one square in any direction, or places a police "
-            + "car - up to six - to wall off the Thief's escape route."
-        )
-    },
-    {
-        icon: "assets/characters/thief-sack.png",
-        title: "How to win",
-        body: (
-            "The Thief wins by reaching the EXIT. The King wins by catching "
-            + "the Thief, or if the Thief still has not escaped after 15 turns."
-        )
-    },
-    {
-        icon: "assets/images/chess-thieves-crest.svg",
-        title: "Controls",
-        body: (
-            "Use the Arrow keys or WASD to move the cursor, Enter or Space to "
-            + "select a square, and R to roll the dice. Good luck!"
-        )
+    on_visibility_change: function intro_visibility_changed() {
+        render_timer();
     }
-];
+});
 
 let game = create_new_game();
 let cursor = {
@@ -136,15 +127,11 @@ let isDiceAnimationPlaying = false;
 let pendingRolledMoveType = null;
 let diceAnimationTimer = null;
 let diceResultTimer = null;
-let win_poster_timer = null;
 let pending_glide = null;
 let celebration_shown = false;
-let intro_index = 0;
 let turn_seconds_left = TURN_TIME_LIMIT;
 let turn_timer_id = null;
 let last_turn_key = "";
-let audio_context = null;
-let music_enabled = false;
 
 let render;
 let render_board;
@@ -189,17 +176,8 @@ let screen_reader_dice_text;
 let choose_king_move;
 let choose_barrier;
 let animate_piece_glide;
-let trigger_win_poster;
-let clear_win_poster;
 let maybe_celebrate;
 let prefers_reduced_motion;
-let show_intro;
-let close_intro;
-let render_intro_step;
-let build_intro_dots;
-let go_intro_next;
-let go_intro_back;
-let handle_intro_keydown;
 let turn_decision_key;
 let render_timer;
 let sync_turn_timer;
@@ -208,19 +186,6 @@ let handle_turn_timeout;
 let start_turn_timer;
 let timeout_message;
 let skip_message;
-let ensure_audio;
-let play_tone;
-let make_shaper_curve;
-let wood_knock;
-let sound_move;
-let sound_barrier;
-let sound_dice;
-let sound_poster_thump;
-let sound_victor;
-let sound_timeout;
-let sound_tick;
-let start_music;
-let stop_music;
 let start_audio;
 
 /**
@@ -467,9 +432,9 @@ play_selected_square = function play_selected_square(row, column) {
 
         if (game.winner === null) {
             if (moved_piece) {
-                sound_move();
+                audio_controller.sound_move();
             } else {
-                sound_barrier();
+                audio_controller.sound_barrier();
             }
         }
     }
@@ -543,9 +508,13 @@ handle_keydown = function handle_keydown(event) {
  */
 handle_global_shortcuts = function handle_global_shortcuts(event) {
     const key = event.key.toLowerCase();
-    const intro_open = !intro_overlay.classList.contains("is-hidden");
 
-    if (event.altKey || event.ctrlKey || event.metaKey || intro_open) {
+    if (
+        event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || intro_controller.is_open()
+    ) {
         return;
     }
 
@@ -557,7 +526,7 @@ handle_global_shortcuts = function handle_global_shortcuts(event) {
         restart_game();
     } else if (key === "h") {
         event.preventDefault();
-        show_intro();
+        intro_controller.show_intro();
     } else if (key === "l" && can_skip_turn()) {
         event.preventDefault();
         skip_turn();
@@ -603,7 +572,7 @@ restart_game = function restart_game() {
     pendingRolledMoveType = null;
     pending_glide = null;
     celebration_shown = false;
-    clear_win_poster();
+    win_poster_controller.clear_win_poster();
     turn_seconds_left = TURN_TIME_LIMIT;
     last_turn_key = "";
     clear_dice_result_timer();
@@ -613,7 +582,7 @@ restart_game = function restart_game() {
     dice_live_element.textContent = "";
     render();
     focus_cursor_square();
-    start_music();
+    audio_controller.start_music();
 };
 
 /**
@@ -672,7 +641,7 @@ handleDiceRollRequest = function handleDiceRollRequest() {
         return;
     }
 
-    sound_dice();
+    audio_controller.sound_dice();
 
     const move_type = getRandomMoveType();
 
@@ -1190,228 +1159,16 @@ animate_piece_glide = function animate_piece_glide(glide) {
 };
 
 /**
- * Removes any win poster currently shown over the board.
- * @returns {undefined}
- */
-clear_win_poster = function clear_win_poster() {
-    const layer = document.querySelector(".win-poster-layer");
-
-    if (win_poster_timer !== null) {
-        clearTimeout(win_poster_timer);
-        win_poster_timer = null;
-    }
-
-    if (layer !== null) {
-        layer.remove();
-    }
-};
-
-/**
- * Shows the matching win poster video over the board.
- * @returns {undefined}
- */
-trigger_win_poster = function trigger_win_poster() {
-    const board_area = document.querySelector(".board-area");
-    const layer = document.createElement("div");
-    const frame = document.createElement("div");
-    const video = document.createElement("video");
-    const source = (
-        game.winner === PLAYER_THIEF
-        ? THIEF_WIN_VIDEO
-        : KING_WIN_VIDEO
-    );
-
-    if (board_area === null) {
-        return;
-    }
-
-    clear_win_poster();
-
-    layer.className = "win-poster-layer";
-    layer.setAttribute("aria-hidden", "true");
-    const board_rect = board_area.getBoundingClientRect();
-    const poster_size = Math.min(board_rect.width * 0.64, 462);
-
-    frame.className = "win-poster-frame";
-    frame.style.maxWidth = String(board_rect.width * 0.75) + "px";
-    frame.style.maxHeight = String(board_rect.height * 0.75) + "px";
-    frame.style.visibility = "hidden";
-    frame.style.width = String(poster_size) + "px";
-
-    video.className = "win-poster-video";
-    video.src = source;
-    video.autoplay = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = "auto";
-
-    video.addEventListener("loadedmetadata", function centre_loaded_poster() {
-        if (video.videoWidth === 0 || video.videoHeight === 0) {
-            return;
-        }
-
-        const ratio = video.videoHeight / video.videoWidth;
-        const frame_width = Math.min(
-            poster_size,
-            board_rect.width * 0.75,
-            (board_rect.height * 0.75) / ratio
-        );
-
-        frame.style.width = String(frame_width) + "px";
-        frame.style.removeProperty("height");
-        frame.style.visibility = "visible";
-    }, {once: true});
-
-    frame.append(video);
-    layer.append(frame);
-    board_area.append(layer);
-
-    video.addEventListener("ended", function hide_finished_poster() {
-        layer.classList.add("is-leaving");
-        win_poster_timer = setTimeout(function remove_finished_poster() {
-            layer.remove();
-            win_poster_timer = null;
-        }, 250);
-    }, {once: true});
-
-    video.play().catch(function ignore_autoplay_block() {
-        return undefined;
-    });
-
-    win_poster_timer = setTimeout(function remove_poster() {
-        layer.remove();
-        win_poster_timer = null;
-    }, WIN_POSTER_DISPLAY_TIME);
-};
-
-/**
  * Runs the win celebration once, the first render after a winner appears.
  * @returns {undefined}
  */
 maybe_celebrate = function maybe_celebrate() {
     if (game.winner !== null && !celebration_shown) {
         celebration_shown = true;
-        stop_music();
-        trigger_win_poster();
-        sound_poster_thump();
-        sound_victor();
-    }
-};
-
-/**
- * Draws the progress dots for the how-to-play intro.
- * @returns {undefined}
- */
-build_intro_dots = function build_intro_dots() {
-    intro_dots.innerHTML = "";
-
-    let i = 0;
-
-    while (i < INTRO_STEPS.length) {
-        const dot = document.createElement("span");
-
-        dot.className = (
-            i === intro_index
-            ? "intro-dot active"
-            : "intro-dot"
-        );
-        intro_dots.append(dot);
-        i += 1;
-    }
-};
-
-/**
- * Shows the current how-to-play step and replays its entrance animation.
- * @returns {undefined}
- */
-render_intro_step = function render_intro_step() {
-    const step = INTRO_STEPS[intro_index];
-    const is_last = intro_index === INTRO_STEPS.length - 1;
-
-    intro_icon.src = step.icon;
-    intro_title.textContent = step.title;
-    intro_body.textContent = step.body;
-    intro_back.disabled = intro_index === 0;
-    intro_next.textContent = (
-        is_last
-        ? "Let's play"
-        : "Next"
-    );
-    build_intro_dots();
-
-    intro_step.classList.remove("intro-step-enter");
-    requestAnimationFrame(function reflow_step() {
-        requestAnimationFrame(function add_enter() {
-            intro_step.classList.add("intro-step-enter");
-        });
-    });
-};
-
-/**
- * Advances the intro, or closes it on the final step.
- * @returns {undefined}
- */
-go_intro_next = function go_intro_next() {
-    if (intro_index >= INTRO_STEPS.length - 1) {
-        close_intro();
-        return;
-    }
-
-    intro_index += 1;
-    render_intro_step();
-};
-
-/**
- * Steps the intro back to the previous rule.
- * @returns {undefined}
- */
-go_intro_back = function go_intro_back() {
-    if (intro_index === 0) {
-        return;
-    }
-
-    intro_index -= 1;
-    render_intro_step();
-};
-
-/**
- * Opens the how-to-play intro at the first step.
- * @returns {undefined}
- */
-show_intro = function show_intro() {
-    intro_index = 0;
-    render_intro_step();
-    intro_overlay.classList.remove("is-hidden");
-    render_timer();
-    intro_next.focus();
-};
-
-/**
- * Closes the how-to-play intro and returns focus to the board.
- * @returns {undefined}
- */
-close_intro = function close_intro() {
-    intro_overlay.classList.add("is-hidden");
-    start_audio();
-    render_timer();
-    focus_cursor_square();
-};
-
-/**
- * Handles keyboard shortcuts while the intro is open.
- * @param {KeyboardEvent} event The keyboard event.
- * @returns {undefined}
- */
-handle_intro_keydown = function handle_intro_keydown(event) {
-    if (event.key === "Escape") {
-        event.preventDefault();
-        close_intro();
-    } else if (event.key === "ArrowRight") {
-        event.preventDefault();
-        go_intro_next();
-    } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        go_intro_back();
+        audio_controller.stop_music();
+        win_poster_controller.trigger_win_poster(game.winner);
+        audio_controller.sound_poster_thump();
+        audio_controller.sound_victor(game.winner);
     }
 };
 
@@ -1436,12 +1193,10 @@ turn_decision_key = function turn_decision_key() {
  * @returns {undefined}
  */
 render_timer = function render_timer() {
-    const intro_open = !intro_overlay.classList.contains("is-hidden");
-
     timer_element.textContent = "";
     timer_element.classList.remove("is-low");
 
-    if (game.winner !== null || intro_open) {
+    if (game.winner !== null || intro_controller.is_open()) {
         return;
     }
 
@@ -1490,9 +1245,11 @@ sync_turn_timer = function sync_turn_timer() {
  * @returns {undefined}
  */
 handle_turn_tick = function handle_turn_tick() {
-    const intro_open = !intro_overlay.classList.contains("is-hidden");
-
-    if (game.winner !== null || intro_open || isDiceAnimationPlaying) {
+    if (
+        game.winner !== null
+        || intro_controller.is_open()
+        || isDiceAnimationPlaying
+    ) {
         render_timer();
         return;
     }
@@ -1506,7 +1263,7 @@ handle_turn_tick = function handle_turn_tick() {
     }
 
     if (turn_seconds_left <= 10) {
-        sound_tick(turn_seconds_left <= 5);
+        audio_controller.sound_tick(turn_seconds_left <= 5);
     }
 
     render_timer();
@@ -1569,335 +1326,11 @@ start_turn_timer = function start_turn_timer() {
 };
 
 /**
- * Lazily creates (and resumes) the Web Audio context for sound effects.
- * @returns {object|null} The audio context, or null when audio is unavailable.
- */
-ensure_audio = function ensure_audio() {
-    if (audio_context === null) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-
-        if (Ctx === undefined) {
-            return null;
-        }
-
-        try {
-            audio_context = new Ctx();
-        } catch (error) {
-            void error;
-            audio_context = null;
-            return null;
-        }
-    }
-
-    if (audio_context !== null && audio_context.state === "suspended") {
-        audio_context.resume();
-    }
-
-    return audio_context;
-};
-
-/**
- * Plays one short synthesised note with a quick fade in and out.
- * @param {number} freq The pitch in hertz.
- * @param {number} duration The length in seconds.
- * @param {string} type The oscillator wave type.
- * @param {number} gain The peak volume from 0 to 1.
- * @param {number} delay Seconds to wait before the note starts.
- * @returns {undefined}
- */
-play_tone = function play_tone(freq, duration, type, gain, delay) {
-    const ctx = ensure_audio();
-
-    if (ctx === null) {
-        return;
-    }
-
-    const start = ctx.currentTime + delay;
-    const osc = ctx.createOscillator();
-    const env = ctx.createGain();
-
-    osc.type = type;
-    osc.frequency.value = freq;
-    env.gain.setValueAtTime(0.0001, start);
-    env.gain.linearRampToValueAtTime(gain, start + 0.008);
-    env.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    osc.connect(env);
-    env.connect(ctx.destination);
-    osc.start(start);
-    osc.stop(start + duration + 0.03);
-};
-
-/**
- * Plays the chess piece movement sound from file.
- * @returns {undefined}
- */
-sound_move = function sound_move() {
-    const sfx = new Audio("assets/audio/chess sound.mp3");
-
-    sfx.volume = 0.6;
-
-    const played = sfx.play();
-
-    if (played !== undefined && typeof played.catch === "function") {
-        played.catch(function ignore_blocked_sound() {
-            return undefined;
-        });
-    }
-};
-
-/**
- * Plays the police car placement sound from file.
- * @returns {undefined}
- */
-sound_barrier = function sound_barrier() {
-    const sfx = new Audio("assets/audio/police.mp3");
-
-    sfx.volume = 0.6;
-
-    const played = sfx.play();
-
-    if (played !== undefined && typeof played.catch === "function") {
-        played.catch(function ignore_blocked_sound() {
-            return undefined;
-        });
-    }
-};
-
-/**
- * Plays the matching end sound once the victor has been decided.
- * @returns {undefined}
- */
-sound_victor = function sound_victor() {
-    const source = (
-        game.winner === PLAYER_THIEF
-        ? THIEF_WIN_SOUND
-        : KING_WIN_SOUND
-    );
-    const sfx = new Audio(source);
-
-    sfx.volume = 0.75;
-
-    const played = sfx.play();
-
-    if (played !== undefined && typeof played.catch === "function") {
-        played.catch(function ignore_blocked_sound() {
-            return undefined;
-        });
-    }
-};
-
-/**
- * Plays a short rattling dice-roll sound.
- * @returns {undefined}
- */
-/**
- * Builds a soft-saturation curve used to warm the dice sound.
- * @param {number} amount How hard to drive the curve.
- * @returns {Float32Array} The waveshaper curve.
- */
-make_shaper_curve = function make_shaper_curve(amount) {
-    const size = 1024;
-    const curve = new Float32Array(size);
-    let i = 0;
-
-    while (i < size) {
-        const x = (i / (size - 1)) * 2 - 1;
-        curve[i] = Math.tanh(x * amount);
-        i += 1;
-    }
-
-    return curve;
-};
-
-/**
- * Plays one struck-wood "knock" using inharmonic modal resonances.
- * @param {number} start When the knock starts, in audio time.
- * @param {number} gain The knock volume.
- * @param {number} base The base resonance frequency.
- * @param {object} out The node to connect into.
- * @returns {undefined}
- */
-wood_knock = function wood_knock(start, gain, base, out) {
-    const ctx = audio_context;
-    const length = Math.floor(ctx.sampleRate * 0.005);
-    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    const modes = [
-        [1, 16, 1, 0.055],
-        [1.59, 13, 0.55, 0.045],
-        [2.71, 10, 0.38, 0.035],
-        [4.16, 8, 0.22, 0.028]
-    ];
-    let i = 0;
-    let k = 0;
-
-    while (i < length) {
-        data[i] = Math.random() * 2 - 1;
-        i += 1;
-    }
-
-    while (k < modes.length) {
-        const mode = modes[k];
-        const src = ctx.createBufferSource();
-        const band = ctx.createBiquadFilter();
-        const env = ctx.createGain();
-
-        src.buffer = buffer;
-        band.type = "bandpass";
-        band.frequency.value = base * mode[0] * (0.95 + Math.random() * 0.1);
-        band.Q.value = mode[1];
-        env.gain.setValueAtTime(gain * mode[2], start);
-        env.gain.exponentialRampToValueAtTime(0.0001, start + mode[3]);
-        src.connect(band);
-        band.connect(env);
-        env.connect(out);
-        src.start(start);
-        src.stop(start + 0.1);
-        k += 1;
-    }
-};
-
-/**
- * Plays a warm wooden dice-roll: several wooden knock sounds
- * @returns {undefined}
- */
-sound_dice = function sound_dice() {
-    const ctx = ensure_audio();
-
-    if (ctx === null) {
-        return;
-    }
-
-    const out = ctx.createGain();
-    const low = ctx.createBiquadFilter();
-    const limiter = ctx.createWaveShaper();
-    const knocks = 6;
-    let t = ctx.currentTime + 1;
-    let i = 0;
-
-    out.gain.value = 2.2;
-    low.type = "lowpass";
-    low.frequency.value = 4000;
-    limiter.curve = make_shaper_curve(1.2);
-    limiter.oversample = "2x";
-    out.connect(limiter);
-    limiter.connect(low);
-    low.connect(ctx.destination);
-
-    while (i < knocks) {
-        const frac = i / knocks;
-        const gain = (
-            0.9 * (0.3 + 0.7 * (1 - frac))
-            * (0.8 + Math.random() * 0.4)
-        );
-        const base = 250 * (0.85 + Math.random() * 0.3);
-
-        wood_knock(t, gain, base, out);
-        t += 0.1 * (0.5 + Math.random()) * (1 + frac);
-        i += 1;
-    }
-};
-
-/**
- * Plays a heavy thump when the win poster lands.
- * @returns {undefined}
- */
-sound_poster_thump = function sound_poster_thump() {
-    const ctx = ensure_audio();
-
-    if (ctx === null) {
-        return;
-    }
-
-    const start = ctx.currentTime + 0.1;
-    const out = ctx.createGain();
-    const low = ctx.createBiquadFilter();
-
-    out.gain.value = 2.8;
-    low.type = "lowpass";
-    low.frequency.value = 900;
-    out.connect(low);
-    low.connect(ctx.destination);
-
-    wood_knock(start, 1.15, 95, out);
-    play_tone(72, 0.18, "sine", 0.28, 0.1);
-};
-
-/**
- * Plays a low buzzer for the king winning on the turn limit.
- * @returns {undefined}
- */
-sound_timeout = function sound_timeout() {
-    play_tone(130, 0.5, "square", 0.3, 0);
-};
-
-/**
- * Plays a clock tick for the final seconds of a turn.
- * @param {boolean} urgent Whether to use the higher, more urgent pitch.
- * @returns {undefined}
- */
-sound_tick = function sound_tick(urgent) {
-    play_tone(
-        (
-            urgent
-            ? 1180
-            : 880
-        ),
-        0.045,
-        "square",
-        0.22,
-        0
-    );
-};
-
-/**
- * Starts the looping background music when the browser allows playback.
- * @returns {undefined}
- */
-start_music = function start_music() {
-    if (MUSIC_SRC === "") {
-        return;
-    }
-
-    if (music_enabled) {
-        return;
-    }
-
-    if (bg_music.getAttribute("src") !== MUSIC_SRC) {
-        bg_music.src = MUSIC_SRC;
-    }
-
-    const played = bg_music.play();
-
-    music_enabled = true;
-
-    if (played !== undefined && typeof played.catch === "function") {
-        played.catch(function music_unavailable() {
-            music_enabled = false;
-        });
-    }
-};
-
-/**
- * Stops the looping background music.
- * @returns {undefined}
- */
-stop_music = function stop_music() {
-    bg_music.pause();
-    bg_music.currentTime = 0;
-    music_enabled = false;
-};
-
-/**
  * Starts all audio systems that are enabled for the game.
  * @returns {undefined}
  */
 start_audio = function start_audio() {
-    ensure_audio();
-
-    if (game.winner === null) {
-        start_music();
-    }
+    audio_controller.start_audio(game.winner === null);
 };
 
 board_element.addEventListener("keydown", handle_keydown);
@@ -1906,17 +1339,17 @@ move_button.addEventListener("click", choose_king_move);
 barrier_button.addEventListener("click", choose_barrier);
 skip_turn_button.addEventListener("click", skip_turn);
 restart_button.addEventListener("click", restart_game);
-how_to_play_button.addEventListener("click", show_intro);
-intro_next.addEventListener("click", go_intro_next);
-intro_back.addEventListener("click", go_intro_back);
-intro_skip.addEventListener("click", close_intro);
-intro_overlay.addEventListener("keydown", handle_intro_keydown);
+how_to_play_button.addEventListener("click", intro_controller.show_intro);
+intro_next.addEventListener("click", intro_controller.go_intro_next);
+intro_back.addEventListener("click", intro_controller.go_intro_back);
+intro_skip.addEventListener("click", intro_controller.close_intro);
+intro_overlay.addEventListener("keydown", intro_controller.handle_intro_keydown);
 document.addEventListener("pointerdown", start_audio);
 document.addEventListener("keydown", start_audio);
 bg_music.volume = 0.08;
 
 createDiceButton();
 render();
-show_intro();
+intro_controller.show_intro();
 start_turn_timer();
 start_audio();

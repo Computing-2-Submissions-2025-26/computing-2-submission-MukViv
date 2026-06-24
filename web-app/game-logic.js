@@ -1,4 +1,4 @@
-/*jslint module*/
+/*jslint*/
 /**
  * Pure rule engine for Chess Thieves.
  *
@@ -64,6 +64,7 @@ const ChessThieves = Object.create(null);
  * Number of rows and columns in the square Chess Thieves board.
  * @memberof ChessThieves
  * @constant {number}
+ * @private
  */
 const BOARD_SIZE = 8;
 
@@ -82,46 +83,11 @@ const MAX_TURNS = 15;
  */
 const MAX_BARRIERS = 6;
 
-/**
- * Marker for an empty square in `game.board`.
- * @memberof ChessThieves
- * @constant {string}
- */
 const EMPTY = "empty";
-
-/**
- * Marker for the Thief's square in `game.board`.
- * @memberof ChessThieves
- * @constant {string}
- */
 const THIEF = "thief";
-
-/**
- * Marker for the King's square in `game.board`.
- * @memberof ChessThieves
- * @constant {string}
- */
 const KING = "king";
-
-/**
- * Marker for the Exit square in `game.board`.
- * @memberof ChessThieves
- * @constant {string}
- */
 const EXIT = "exit";
-
-/**
- * Marker for a permanent starting traffic barrier in `game.board`.
- * @memberof ChessThieves
- * @constant {string}
- */
 const BARRIER = "barrier";
-
-/**
- * Marker for a King-placed police car in `game.board`.
- * @memberof ChessThieves
- * @constant {string}
- */
 const POLICE_CAR = "police_car";
 
 /**

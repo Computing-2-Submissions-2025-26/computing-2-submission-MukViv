@@ -19,7 +19,6 @@
         >
         <h1>Chess Thieves</h1>
         <a class="docs-link" href="../docs/index.html">API Documentation</a>
-        <p>The THIEF tries to reach the EXIT square. The KING blocks the way and tries to catch the thief.</p>
     </header>
     <main class="game-layout">
         <section class="panel controls-panel" aria-label="Game controls">
@@ -112,18 +111,47 @@
                 type="button"
                 aria-label="Skip how to play"
             >&times;</button>
-            <div id="intro-step" class="intro-step">
+            <div class="intro-step">
                 <img
-                    id="intro-icon"
                     class="intro-icon"
-                    src=""
+                    src="assets/images/chess-thieves-crest.svg"
                     alt=""
                     aria-hidden="true"
                 >
-                <h2 id="intro-title" class="intro-title"></h2>
-                <p id="intro-body" class="intro-body"></p>
+                <div class="intro-copy">
+                    <h2 id="intro-title" class="intro-title">Chess Thieves</h2>
+                    <p class="intro-body">A thief has stolen a set of chess pieces and is trying to escape. The king needs to catch them before they reach the exit.</p>
+                </div>
             </div>
-            <div id="intro-dots" class="intro-dots" aria-hidden="true"></div>
+            <div class="intro-step is-hidden">
+                <img
+                    class="intro-icon"
+                    src="assets/characters/thief-sack.png"
+                    alt=""
+                    aria-hidden="true"
+                >
+                <div class="intro-copy">
+                    <h2 class="intro-title">Thief</h2>
+                    <p class="intro-body">Reach the EXIT square within 15 turns to win. Roll the dice to move and don't get caught!</p>
+                </div>
+            </div>
+            <div class="intro-step is-hidden">
+                <img
+                    class="intro-icon"
+                    src="assets/characters/king.png"
+                    alt=""
+                    aria-hidden="true"
+                >
+                <div class="intro-copy">
+                    <h2 class="intro-title">King</h2>
+                    <p class="intro-body">Catch the Thief to win. Place police cars to block their path. You also win if the Thief has not escaped after 15 turns.</p>
+                </div>
+            </div>
+            <div id="intro-dots" class="intro-dots" aria-hidden="true">
+                <span class="intro-dot active"></span>
+                <span class="intro-dot"></span>
+                <span class="intro-dot"></span>
+            </div>
             <div class="intro-buttons">
                 <button id="intro-back" class="intro-back" type="button">
                     Back

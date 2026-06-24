@@ -16,7 +16,6 @@
         "template": "node_modules/docdash",
         "encoding": "utf8",
         "destination": "docs/",
-        "readme": "docs-home.md",
         "recurse": true,
         "verbose": true
     },
