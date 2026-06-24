@@ -30,6 +30,8 @@ const DICE_STATIONARY_IMAGE = "assets/images/dice_stationary_image.png";
 const DICE_ROLL_GIF = "assets/video/dice_roll.gif";
 const THIEF_WIN_VIDEO = "assets/video/escaped.mp4";
 const KING_WIN_VIDEO = "assets/video/arrested.mp4";
+const THIEF_WIN_SOUND = "assets/audio/laugh.mp3";
+const KING_WIN_SOUND = "assets/audio/jail-sound.mp3";
 
 const rollResultImageByMoveType = {
     bishop: "assets/images/roll-results/bishop.png",
@@ -214,9 +216,11 @@ let sound_move;
 let sound_barrier;
 let sound_dice;
 let sound_poster_thump;
+let sound_victor;
 let sound_timeout;
 let sound_tick;
 let start_music;
+let stop_music;
 let start_audio;
 
 /**
@@ -609,6 +613,7 @@ restart_game = function restart_game() {
     dice_live_element.textContent = "";
     render();
     focus_cursor_square();
+    start_music();
 };
 
 /**
@@ -1295,8 +1300,10 @@ trigger_win_poster = function trigger_win_poster() {
 maybe_celebrate = function maybe_celebrate() {
     if (game.winner !== null && !celebration_shown) {
         celebration_shown = true;
+        stop_music();
         trigger_win_poster();
         sound_poster_thump();
+        sound_victor();
     }
 };
 
@@ -1666,6 +1673,29 @@ sound_barrier = function sound_barrier() {
 };
 
 /**
+ * Plays the matching end sound once the victor has been decided.
+ * @returns {undefined}
+ */
+sound_victor = function sound_victor() {
+    const source = (
+        game.winner === PLAYER_THIEF
+        ? THIEF_WIN_SOUND
+        : KING_WIN_SOUND
+    );
+    const sfx = new Audio(source);
+
+    sfx.volume = 0.75;
+
+    const played = sfx.play();
+
+    if (played !== undefined && typeof played.catch === "function") {
+        played.catch(function ignore_blocked_sound() {
+            return undefined;
+        });
+    }
+};
+
+/**
  * Plays a short rattling dice-roll sound.
  * @returns {undefined}
  */
@@ -1858,12 +1888,25 @@ start_music = function start_music() {
 };
 
 /**
+ * Stops the looping background music.
+ * @returns {undefined}
+ */
+stop_music = function stop_music() {
+    bg_music.pause();
+    bg_music.currentTime = 0;
+    music_enabled = false;
+};
+
+/**
  * Starts all audio systems that are enabled for the game.
  * @returns {undefined}
  */
 start_audio = function start_audio() {
     ensure_audio();
-    start_music();
+
+    if (game.winner === null) {
+        start_music();
+    }
 };
 
 board_element.addEventListener("keydown", handle_keydown);

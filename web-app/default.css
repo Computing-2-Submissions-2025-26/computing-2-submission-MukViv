@@ -214,11 +214,34 @@ header p {
     width: var(--board-size);
 }
 
+.board-area::before {
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(0, 0, 0, 0.42) 0%,
+            rgba(0, 0, 0, 0.24) 46%,
+            rgba(0, 0, 0, 0) 72%
+        );
+    bottom: -18px;
+    content: "";
+    height: 12%;
+    left: 5%;
+    pointer-events: none;
+    position: absolute;
+    right: 5%;
+    z-index: 0;
+}
+
 .game-board,
 .board {
     aspect-ratio: 1 / 1;
     border: var(--board-border-width) solid var(--color-gold-dark);
     border-radius: 0;
+    box-shadow:
+        0 24px 30px rgba(0, 0, 0, 0.44),
+        0 9px 12px rgba(0, 0, 0, 0.36),
+        inset 0 0 0 var(--border-width-medium) rgba(255, 255, 255, 0.18),
+        inset 0 0 0 calc(var(--border-width-thick) * 2) rgba(28, 18, 9, 0.2);
     display: grid;
     grid-auto-rows: 1fr;
     grid-template-columns: repeat(8, 1fr);
@@ -268,6 +291,9 @@ header p {
 
 .piece-image {
     display: block;
+    filter:
+        drop-shadow(0 6px 5px rgba(0, 0, 0, 0.46))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.22));
     height: 100%;
     max-height: 100%;
     max-width: 100%;
@@ -349,6 +375,23 @@ header p {
 
 .square.police-car {
     background: var(--color-barrier);
+}
+
+.square.thief .piece-image,
+.square.thief-at-the-exit .piece-image,
+.square.king .piece-image,
+.square.king-caught-the-thief .piece-image {
+    max-height: 92%;
+    max-width: 92%;
+}
+
+.square.barrier .piece-image,
+.square.police-car .piece-image {
+    filter:
+        drop-shadow(0 4px 3px rgba(0, 0, 0, 0.48))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16));
+    max-height: 88%;
+    max-width: 88%;
 }
 
 .square.cursor {
