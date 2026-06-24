@@ -10,6 +10,20 @@ be nice Thanks!
 
 This is the submission template for your Computing 2 Applications coursework submission.
 
+## Chess Thieves
+
+Chess Thieves is a turn-based board game where the Thief tries to escape by
+reaching the Exit, while the King tries to catch the Thief or delay the escape
+past the turn limit.
+
+The pure game-rule module is `web-app/game-logic.js`. It represents the whole
+match as a plain game state object and exposes functions for creating a game,
+rolling the Thief movement die, validating moves, moving the Thief, moving the
+King, placing police cars, skipping turns, and checking the winner.
+
+The generated API documentation is in `docs/index.html`. The main namespace
+page is `docs/ChessThieves.html`.
+
 ## Checklist
 ### Install dependencies locally
 This template relies on a a few packages from the Node Package Manager, npm.
