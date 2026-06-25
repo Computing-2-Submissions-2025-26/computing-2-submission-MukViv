@@ -297,7 +297,7 @@ render_status = function render_status() {
 
     if (winner === PLAYER_THIEF) {
         result_element.textContent = (
-            "The Thief escaped with the magical pieces."
+            "The Thief escaped with the chess pieces."
         );
     } else if (winner === PLAYER_KING) {
         result_element.textContent = "The King recovered the stolen pieces.";
