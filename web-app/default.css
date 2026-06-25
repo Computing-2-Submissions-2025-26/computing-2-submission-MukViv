@@ -24,7 +24,7 @@
     --color-legal-move: #6366f1;
     --color-legal-move-glow: rgba(99, 102, 241, 0.65);
     --color-legal-move-fill: rgba(99, 102, 241, 0.34);
-    --color-legal-barrier: #f59e0b;
+    --color-legal-police-car: #f59e0b;
 
     --spacing-x-small: 4px;
     --spacing-small: 8px;
@@ -267,13 +267,15 @@ h1 {
     color: var(--color-white);
     cursor: pointer;
     display: flex;
-    font-size: var(--font-size-large);
+    /* Scale square text (e.g. "EXIT") to the square so it stays inside the box
+       when the board shrinks on zoom-out, instead of wrapping and squishing. */
+    font-size: min(var(--font-size-large), calc(var(--board-size) / 8 * 0.22));
     font-weight: 800;
     height: 100%;
     justify-content: center;
     min-height: 0;
     min-width: 0;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
     padding: var(--spacing-x-small);
     position: relative;
     text-align: center;
@@ -316,8 +318,8 @@ h1 {
     top: var(--spacing-small);
 }
 
-.square.legal-barrier:hover,
-.square.legal-barrier:focus-visible {
+.square.legal-police-car:hover,
+.square.legal-police-car:focus-visible {
     filter: brightness(1.08);
 }
 
@@ -373,9 +375,20 @@ h1 {
     max-width: 88%;
 }
 
-.square.cursor {
-    outline: var(--cursor-width) solid var(--color-cursor);
-    outline-offset: calc(-1 * var(--board-border-width));
+.square.cursor,
+.square:focus-visible {
+    /* Soft two-tone inset ring: a thin dark edge and a thin warm-light edge
+       bracket a sky-blue ring, keeping the indicator >= 3:1 against every square
+       colour (WCAG 1.4.11) - including the teal Thief and green King - while a
+       gentle inner glow feathers the edges so it does not read razor-sharp.
+       Inset so it never clips at the board border. */
+    outline: none;
+    box-shadow:
+        inset 0 0 0 var(--border-width-medium) var(--color-black),
+        inset 0 0 0 calc(var(--border-width-medium) + 3px) var(--color-cursor),
+        inset 0 0 0 calc(var(--border-width-medium) + 4px) var(--color-text),
+        inset 0 0 var(--spacing-small) var(--spacing-x-small)
+            rgba(56, 189, 248, 0.3);
 }
 
 /* controls */
@@ -412,7 +425,7 @@ button:disabled {
 }
 
 #king-move[aria-pressed="true"],
-#king-barrier[aria-pressed="true"] {
+#king-police-car[aria-pressed="true"] {
     background: var(--color-king-action);
     border-color: #8ee6a8;
     color: var(--color-white);

@@ -5,25 +5,25 @@
 import ChessThieves from "./game-logic.js";
 const {
     BOARD_SIZE,
-    MAX_BARRIERS,
+    MAX_POLICE_CARS,
     MAX_TURNS,
     PLAYER_KING,
     PLAYER_THIEF,
     create_new_game,
     get_square_label,
-    is_valid_barrier_placement,
+    is_valid_police_car_placement,
     is_valid_king_move,
     is_valid_thief_move,
     move_king,
     move_thief,
     pass_turn,
-    place_barrier,
+    place_police_car,
     roll_thief_die,
     set_thief_move
 } = ChessThieves;
 import {createAudioController} from "./audio.js";
 import {createIntroController} from "./intro.js";
-import createWinPosterController from "./win-poster.js";
+import {createWinPosterController} from "./win-poster.js";
 
 const RESULT_DISPLAY_TIME = 900;
 const ROLLING_ANIMATION_TIME = 2000;
@@ -61,11 +61,11 @@ const board_element = document.querySelector("#board");
 const turn_element = document.querySelector("#turn");
 const timer_element = document.querySelector("#timer");
 const die_element = document.querySelector("#die");
-const barrier_element = document.querySelector("#barriers");
+const police_cars_element = document.querySelector("#police-cars");
 const message_element = document.querySelector("#message");
 const result_element = document.querySelector("#result");
 const move_button = document.querySelector("#king-move");
-const barrier_button = document.querySelector("#king-barrier");
+const police_car_button = document.querySelector("#king-police-car");
 const skip_turn_button = document.querySelector("#skip-turn");
 const restart_button = document.querySelector("#restart");
 const how_to_play_button = document.querySelector("#how-to-play");
@@ -77,46 +77,14 @@ const dice_roll_image = document.querySelector("#dice-roll-image");
 const dice_result_image = document.querySelector("#dice-result-image");
 const dice_live_element = document.querySelector("#dice-live");
 const intro_overlay = document.querySelector("#intro-overlay");
-const intro_steps = document.querySelectorAll(".intro-step");
+const intro_step = document.querySelector("#intro-step");
+const intro_icon = document.querySelector("#intro-icon");
+const intro_title = document.querySelector("#intro-title");
+const intro_body = document.querySelector("#intro-body");
 const intro_dots = document.querySelector("#intro-dots");
 const intro_back = document.querySelector("#intro-back");
 const intro_next = document.querySelector("#intro-next");
 const intro_skip = document.querySelector("#intro-skip");
-
-const audio_controller = createAudioController({
-    barrier_src: "assets/audio/police.mp3",
-    bg_music,
-    king_win_src: KING_WIN_SOUND,
-    move_src: "assets/audio/chess sound.mp3",
-    music_src: MUSIC_SRC,
-    player_thief: PLAYER_THIEF,
-    thief_win_src: THIEF_WIN_SOUND
-});
-
-const win_poster_controller = createWinPosterController({
-    display_time: WIN_POSTER_DISPLAY_TIME,
-    king_win_video: KING_WIN_VIDEO,
-    player_thief: PLAYER_THIEF,
-    thief_win_video: THIEF_WIN_VIDEO
-});
-
-const intro_controller = createIntroController({
-    elements: {
-        back: intro_back,
-        dots: intro_dots,
-        next: intro_next,
-        overlay: intro_overlay,
-        steps: intro_steps
-    },
-    on_close: function intro_closed() {
-        start_audio();
-        render_timer();
-        focus_cursor_square();
-    },
-    on_visibility_change: function intro_visibility_changed() {
-        render_timer();
-    }
-});
 
 let game = create_new_game();
 let cursor = {
@@ -174,7 +142,7 @@ let hide_dice_stage;
 let hide_rolled_piece_image;
 let screen_reader_dice_text;
 let choose_king_move;
-let choose_barrier;
+let choose_police_car;
 let animate_piece_glide;
 let maybe_celebrate;
 let prefers_reduced_motion;
@@ -187,6 +155,45 @@ let start_turn_timer;
 let timeout_message;
 let skip_message;
 let start_audio;
+
+const audio_controller = createAudioController({
+    bg_music,
+    king_win_src: KING_WIN_SOUND,
+    move_src: "assets/audio/chess sound.mp3",
+    music_src: MUSIC_SRC,
+    police_car_src: "assets/audio/police.mp3",
+    player_thief: PLAYER_THIEF,
+    thief_win_src: THIEF_WIN_SOUND
+});
+
+const win_poster_controller = createWinPosterController({
+    display_time: WIN_POSTER_DISPLAY_TIME,
+    king_win_video: KING_WIN_VIDEO,
+    player_thief: PLAYER_THIEF,
+    thief_win_video: THIEF_WIN_VIDEO
+});
+
+const intro_controller = createIntroController({
+    elements: {
+        back: intro_back,
+        body: intro_body,
+        dots: intro_dots,
+        icon: intro_icon,
+        next: intro_next,
+        overlay: intro_overlay,
+        step: intro_step,
+        title: intro_title
+    },
+    on_close: function intro_closed() {
+        start_audio();
+        render_timer();
+        focus_cursor_square();
+    },
+    on_visibility_change: function intro_visibility_changed() {
+        render_timer();
+    }
+});
+
 render = function render() {
     render_board();
     render_status();
@@ -272,10 +279,11 @@ render_status = function render_status() {
         ? screen_reader_dice_text()
         : "Thief move waiting for next roll"
     );
-    const barrier_count = String(game.barriers.length);
+    const police_car_count = String(game.police_cars.length);
 
-    barrier_element.textContent = (
-        "Police cars: " + barrier_count + " of " + String(MAX_BARRIERS)
+    police_cars_element.textContent = (
+        "Police cars: " + police_car_count + " of "
+        + String(MAX_POLICE_CARS)
     );
 
     const disable_king_controls = (
@@ -284,15 +292,15 @@ render_status = function render_status() {
     );
 
     move_button.disabled = disable_king_controls;
-    barrier_button.disabled = disable_king_controls;
+    police_car_button.disabled = disable_king_controls;
     skip_turn_button.disabled = !can_skip_turn();
     move_button.setAttribute(
         "aria-pressed",
         String(!disable_king_controls && king_action === "move")
     );
-    barrier_button.setAttribute(
+    police_car_button.setAttribute(
         "aria-pressed",
-        String(!disable_king_controls && king_action === "barrier")
+        String(!disable_king_controls && king_action === "police_car")
     );
 
     if (winner === PLAYER_THIEF) {
@@ -348,11 +356,11 @@ play_selected_square = function play_selected_square(row, column) {
             return;
         }
 
-        next_game = move_thief(game, row, column);
+        next_game = move_thief(game, {row, column});
     } else if (king_action === "move") {
-        next_game = move_king(game, row, column);
+        next_game = move_king(game, {row, column});
     } else {
-        next_game = place_barrier(game, row, column);
+        next_game = place_police_car(game, {row, column});
     }
 
     if (next_game === null) {
@@ -383,7 +391,7 @@ play_selected_square = function play_selected_square(row, column) {
             if (moved_piece) {
                 audio_controller.sound_move();
             } else {
-                audio_controller.sound_barrier();
+                audio_controller.sound_police_car();
             }
         }
     }
@@ -465,7 +473,7 @@ handle_global_shortcuts = function handle_global_shortcuts(event) {
         choose_king_move();
     } else if (key === "p" && king_controls_available()) {
         event.preventDefault();
-        choose_barrier();
+        choose_police_car();
     }
 };
 king_controls_available = function king_controls_available() {
@@ -618,7 +626,7 @@ invalid_message = function invalid_message(row, column) {
         return "That square is not legal for the current thief move.";
     }
 
-    if (king_action === "barrier") {
+    if (king_action === "police_car") {
         return "That police car cannot be placed there.";
     }
 
@@ -658,10 +666,10 @@ legal_action_for_square = function legal_action_for_square(row, column) {
 
     if (
         game.current_player === PLAYER_KING
-        && king_action === "barrier"
-        && is_valid_barrier_placement(game, position)
+        && king_action === "police_car"
+        && is_valid_police_car_placement(game, position)
     ) {
-        return "barrier";
+        return "police_car";
     }
 
     return null;
@@ -671,7 +679,7 @@ legal_label = function legal_label(legal_action) {
         return ". Legal move";
     }
 
-    if (legal_action === "barrier") {
+    if (legal_action === "police_car") {
         return ". Legal police car placement";
     }
 
@@ -701,8 +709,8 @@ square_class = function square_class(row, column, label, legal_action) {
         );
     }
 
-    if (legal_action === "barrier") {
-        classes.push("legal-barrier");
+    if (legal_action === "police_car") {
+        classes.push("legal-police-car");
     }
 
     return classes.join(" ");
@@ -831,8 +839,8 @@ choose_king_move = function choose_king_move() {
     render();
     focus_cursor_square();
 };
-choose_barrier = function choose_barrier() {
-    king_action = "barrier";
+choose_police_car = function choose_police_car() {
+    king_action = "police_car";
     message_element.textContent = (
         "King action: choose an empty square for a police car."
     );
@@ -885,8 +893,8 @@ animate_piece_glide = function animate_piece_glide(glide) {
         to_square.style.zIndex = "";
     }, {once: true});
 
-    requestAnimationFrame(function before_glide() {
-        requestAnimationFrame(function start_glide() {
+    window.requestAnimationFrame(function before_glide() {
+        window.requestAnimationFrame(function start_glide() {
             piece.style.transition = (
                 "transform 340ms cubic-bezier(0.22, 0.61, 0.36, 1)"
             );
@@ -1009,7 +1017,7 @@ start_audio = function start_audio() {
 
 dice_button.setAttribute("aria-keyshortcuts", "R");
 move_button.setAttribute("aria-keyshortcuts", "K");
-barrier_button.setAttribute("aria-keyshortcuts", "P");
+police_car_button.setAttribute("aria-keyshortcuts", "P");
 skip_turn_button.setAttribute("aria-keyshortcuts", "L");
 restart_button.setAttribute("aria-keyshortcuts", "N");
 how_to_play_button.setAttribute("aria-keyshortcuts", "H");
@@ -1017,14 +1025,17 @@ how_to_play_button.setAttribute("aria-keyshortcuts", "H");
 board_element.addEventListener("keydown", handle_keydown);
 document.addEventListener("keydown", handle_global_shortcuts);
 move_button.addEventListener("click", choose_king_move);
-barrier_button.addEventListener("click", choose_barrier);
+police_car_button.addEventListener("click", choose_police_car);
 skip_turn_button.addEventListener("click", skip_turn);
 restart_button.addEventListener("click", restart_game);
 how_to_play_button.addEventListener("click", intro_controller.show_intro);
 intro_next.addEventListener("click", intro_controller.go_intro_next);
 intro_back.addEventListener("click", intro_controller.go_intro_back);
 intro_skip.addEventListener("click", intro_controller.close_intro);
-intro_overlay.addEventListener("keydown", intro_controller.handle_intro_keydown);
+intro_overlay.addEventListener(
+    "keydown",
+    intro_controller.handle_intro_keydown
+);
 document.addEventListener("pointerdown", start_audio);
 document.addEventListener("keydown", start_audio);
 

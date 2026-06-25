@@ -7,15 +7,9 @@ This is the submission template for your Computing 2 Applications coursework sub
 
 Chess Thieves is a turn-based board game where the Thief tries to escape by
 reaching the Exit, while the King tries to catch the Thief or delay the escape
-past the turn limit.
+past the turn limit (15 turns). Each player has a 20s window to act before their
+turn is automatically skipped.
 
-The pure game-rule module is `web-app/game-logic.js`. It represents the whole
-match as a plain game state object and exposes functions for creating a game,
-rolling the Thief movement die, validating moves, moving the Thief, moving the
-King, placing police cars, skipping turns, and checking the winner.
-
-The generated API documentation is in `docs/index.html`. The main namespace
-page is `docs/ChessThieves.html`.
 
 ### Core Game Loop
 
@@ -24,7 +18,7 @@ page is `docs/ChessThieves.html`.
 3. Store that roll with `set_thief_move(game, move_type)`.
 4. Use `is_valid_thief_move(...)` to show legal Thief destinations.
 5. Apply the Thief move with `move_thief(game, row, column)`.
-6. On the King's turn, either use `move_king(...)` or `place_barrier(...)`.
+6. On the King's turn, either use `move_king(...)` or `place_police_car(...)`.
 7. Use `check_winner(game)` or `is_game_ended(game)` after each returned state.
 
 Most action functions return a new game state when the action is legal and

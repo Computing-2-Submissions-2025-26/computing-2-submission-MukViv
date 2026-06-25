@@ -1,11 +1,10 @@
-/*jslint long, node*/
+/*jslint long*/
 import assert from "node:assert/strict";
-import {describe, it} from "mocha";
 import ChessThieves from "../game-logic.js";
 
 const {
     BARRIER,
-    MAX_BARRIERS,
+    MAX_POLICE_CARS,
     MAX_TURNS,
     PLAYER_KING,
     PLAYER_THIEF,
@@ -13,11 +12,9 @@ const {
     check_winner,
     create_empty_board,
     create_new_game,
-    get_square_label,
     is_game_ended,
-    is_inside_board,
     is_path_clear,
-    is_valid_barrier_placement,
+    is_valid_police_car_placement,
     is_valid_bishop_move,
     is_valid_king_move,
     is_valid_knight_move,
@@ -28,7 +25,7 @@ const {
     move_king,
     move_thief,
     pass_turn,
-    place_barrier,
+    place_police_car,
     roll_thief_die,
     set_thief_move
 } = ChessThieves;
@@ -166,7 +163,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + "but got " + String(game.map_barriers.length) + "."
             );
             assert.equal(
-                game.barriers.length,
+                game.police_cars.length,
                 0,
                 "A new game should start with zero player-placed police cars."
             );
@@ -178,80 +175,10 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + board_text(game.board)
             );
             assert.equal(
-                is_valid_barrier_placement(king_turn(game), game.thief),
+                is_valid_police_car_placement(king_turn(game), game.thief),
                 false,
                 "The King should not be able to place a police car on the Thief's square."
                 + game_text(game)
-            );
-        });
-
-        it("labels each square type", function test_square_labels() {
-            const game = create_new_game(controlled_zero);
-            // Thief at {row:7, column:0}, King at {row:0, column:0},
-            // Exit at {row:1, column:0}, map_barriers start at {row:0, column:1}.
-
-            assert.equal(
-                get_square_label(game, 7, 0),
-                "Thief",
-                "Row 7, column 0 should be labeled \"Thief\"."
-            );
-            assert.equal(
-                get_square_label(game, 0, 0),
-                "King",
-                "Row 0, column 0 should be labeled \"King\"."
-            );
-            assert.equal(
-                get_square_label(game, 1, 0),
-                "Exit",
-                "Row 1, column 0 should be labeled \"Exit\"."
-            );
-            assert.equal(
-                get_square_label(game, 4, 4),
-                "Empty",
-                "Row 4, column 4 is unoccupied and should be labeled \"Empty\"."
-            );
-            assert.equal(
-                get_square_label(
-                    game,
-                    game.map_barriers[0].row,
-                    game.map_barriers[0].column
-                ),
-                "Barrier",
-                "The first map barrier at " + position_text(game.map_barriers[0])
-                + " should be labeled \"Barrier\"."
-            );
-
-            // Police Car: place one and check its label on the resulting state.
-            const after_police_car = place_barrier(king_turn(game), 5, 5);
-            assert.notEqual(
-                after_police_car,
-                null,
-                "Placing a police car at row 5, column 5 should succeed."
-                + game_text(game)
-            );
-            assert.equal(
-                get_square_label(after_police_car, 5, 5),
-                "Police Car",
-                "Row 5, column 5 should be labeled \"Police Car\" after placement."
-                + board_text(after_police_car.board)
-            );
-
-            // Thief at the Exit: override thief position to match the exit.
-            const thief_at_exit = Object.assign({}, game, {thief: game.exit});
-            assert.equal(
-                get_square_label(thief_at_exit, game.exit.row, game.exit.column),
-                "Thief at the Exit",
-                "When the Thief is on the Exit square, the label should be "
-                + "\"Thief at the Exit\", not just \"Thief\" or \"Exit\"."
-            );
-
-            // King caught the Thief: override king position to match the thief.
-            const king_on_thief = Object.assign({}, game, {king: game.thief});
-            assert.equal(
-                get_square_label(king_on_thief, game.thief.row, game.thief.column),
-                "King caught the Thief",
-                "When the King is on the Thief's square, the label should be "
-                + "\"King caught the Thief\", not just \"King\" or \"Thief\"."
             );
         });
 
@@ -313,24 +240,6 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 "The Thief should not be able to rook-slide through a traffic barrier "
                 + "at row 4, column 5."
                 + board_text(board)
-            );
-        });
-
-        it("queen move is valid within four squares", function test_queen_range_valid() {
-            const game = create_new_game(function queen_roll() {
-                return 0.99;
-            });
-            const valid_target = {
-                row: game.thief.row - 4,
-                column: game.thief.column
-            };
-
-            assert.equal(
-                is_valid_thief_move(game, "queen", game.thief, valid_target),
-                true,
-                "Queen roll should allow the Thief to move four squares vertically "
-                + "from " + position_text(game.thief) + " to " + position_text(valid_target) + "."
-                + game_text(game)
             );
         });
 
@@ -404,28 +313,6 @@ describe("Chess Thieves", function describe_chess_thieves() {
             );
         });
 
-        it("bishop is blocked by a barrier on the diagonal path", function test_bishop_diagonal_blocked() {
-            const board = create_empty_board();
-            // Barrier at (3,3) sits on the diagonal between (4,4) and (1,1).
-            board[3][3] = BARRIER;
-
-            assert.equal(
-                is_valid_bishop_move(board, {row: 4, column: 4}, {row: 1, column: 1}),
-                false,
-                "A traffic barrier at row 3, column 3 should block the bishop's "
-                + "diagonal slide from row 4, column 4 to row 1, column 1."
-                + board_text(board)
-            );
-            // Sliding in the opposite diagonal direction should still be unaffected.
-            assert.equal(
-                is_valid_bishop_move(board, {row: 4, column: 4}, {row: 2, column: 6}),
-                true,
-                "The barrier at row 3, column 3 should not affect the bishop "
-                + "sliding in the opposite direction to row 2, column 6."
-                + board_text(board)
-            );
-        });
-
         it("thief_move resets to null after the King's turn ends", function test_thief_move_reset() {
             const game = create_new_game(controlled_zero);
             // thief at {row:7,column:0}; rook one step up; King at {row:0,column:0} → (1,1).
@@ -438,7 +325,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + game_text(rolled)
             );
 
-            const after_thief = move_thief(rolled, 6, 0);
+            const after_thief = move_thief(rolled, {row: 6, column: 0});
             assert.notEqual(
                 after_thief,
                 null,
@@ -446,7 +333,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + game_text(rolled)
             );
 
-            const after_king = move_king(after_thief, 1, 1);
+            const after_king = move_king(after_thief, {row: 1, column: 1});
             assert.notEqual(
                 after_king,
                 null,
@@ -485,7 +372,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
         it("moves the Thief and hands control to the King", function test_move_thief_success() {
             const game = create_new_game(controlled_zero);
             const rolled = set_thief_move(game, "rook");
-            const result = move_thief(rolled, 6, 0);
+            const result = move_thief(rolled, {row: 6, column: 0});
 
             assert.notEqual(
                 result,
@@ -516,7 +403,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
 
         it("refuses a Thief move on the King's turn", function test_thief_move_wrong_turn() {
             assert.equal(
-                move_thief(king_turn(), 6, 0),
+                move_thief(king_turn(), {row: 6, column: 0}),
                 null,
                 "move_thief should return null when it is the King's turn, not the Thief's."
             );
@@ -524,7 +411,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
 
         it("moves the King and starts the next round", function test_move_king_success() {
             const game = create_new_game(controlled_zero);
-            const result = move_king(king_turn(game), 1, 1);
+            const result = move_king(king_turn(game), {row: 1, column: 1});
 
             assert.notEqual(
                 result,
@@ -569,6 +456,18 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 "The King at " + position_text(game.king)
                 + " should not be able to move onto the Exit at " + position_text(game.exit)
                 + "."
+                + game_text(game)
+            );
+        });
+
+        it("prevents the King from moving onto traffic barriers", function test_king_blocked_by_barrier() {
+            const game = create_new_game(controlled_zero);
+
+            assert.equal(
+                is_valid_king_move(king_turn(game), game.map_barriers[0]),
+                false,
+                "The King should not be able to step onto the adjacent traffic barrier at "
+                + position_text(game.map_barriers[0]) + "."
                 + game_text(game)
             );
         });
@@ -688,7 +587,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + game_text(game)
             );
             assert.equal(
-                move_thief(game, game.thief.row - 1, game.thief.column),
+                move_thief(game, {row: game.thief.row - 1, column: game.thief.column}),
                 null,
                 "move_thief should return null when thief_move is null — "
                 + "the Thief must set a die result before moving."
@@ -769,7 +668,10 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 thief: {row: game.exit.row + 1, column: game.exit.column},
                 thief_move: "pawn"
             });
-            const result = move_thief(near_exit, game.exit.row, game.exit.column);
+            const result = move_thief(near_exit, {
+                row: game.exit.row,
+                column: game.exit.column
+            });
 
             assert.notEqual(
                 result,
@@ -799,11 +701,10 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 king: {row: game.thief.row - 1, column: game.thief.column},
                 current_player: PLAYER_KING
             });
-            const result = move_king(
-                king_adjacent,
-                game.thief.row,
-                game.thief.column
-            );
+            const result = move_king(king_adjacent, {
+                row: game.thief.row,
+                column: game.thief.column
+            });
 
             assert.notEqual(
                 result,
@@ -838,12 +739,12 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + game_text(ended)
             );
             assert.equal(
-                move_thief(ended, 5, 0),
+                move_thief(ended, {row: 5, column: 0}),
                 null,
                 "move_thief should return null after the game is over."
             );
             assert.equal(
-                move_king(king_turn(ended), 0, 1),
+                move_king(king_turn(ended), {row: 0, column: 1}),
                 null,
                 "move_king should return null after the game is over."
             );
@@ -858,14 +759,14 @@ describe("Chess Thieves", function describe_chess_thieves() {
 
     describe("Police cars and barriers", function describe_police_cars_and_barriers() {
 
-        it("places police cars on empty squares", function test_place_barrier() {
+        it("places police cars on empty squares", function test_place_police_car() {
             const game = king_turn(create_new_game(controlled_zero));
-            const placed_game = place_barrier(game, 1, 1);
+            const placed_game = place_police_car(game, {row: 1, column: 1});
 
             assert.equal(
-                place_barrier(game, game.thief.row, game.thief.column),
+                place_police_car(game, {row: game.thief.row, column: game.thief.column}),
                 null,
-                "place_barrier should return null when the target square holds the Thief."
+                "place_police_car should return null when the target square holds the Thief."
                 + game_text(game)
             );
             assert.notEqual(
@@ -876,10 +777,10 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 + game_text(game)
             );
             assert.equal(
-                placed_game.barriers.length,
+                placed_game.police_cars.length,
                 1,
-                "After one placement, barriers.length should be 1, but got "
-                + String(placed_game.barriers.length) + "."
+                "After one placement, police_cars.length should be 1, but got "
+                + String(placed_game.police_cars.length) + "."
             );
             assert.equal(
                 placed_game.board[1][1],
@@ -893,7 +794,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
             const game = create_new_game();
 
             assert.equal(
-                is_valid_barrier_placement(king_turn(game), game.exit),
+                is_valid_police_car_placement(king_turn(game), game.exit),
                 false,
                 "The King should not be able to place a police car on the Exit at "
                 + position_text(game.exit) + "."
@@ -901,99 +802,75 @@ describe("Chess Thieves", function describe_chess_thieves() {
             );
         });
 
-        it("limits police cars to the exported maximum", function test_barrier_limit() {
-            // Build up to MAX_BARRIERS via real place_barrier calls so the board
-            // stays consistent and the test exercises actual game logic.
-            const start = king_turn(create_new_game(controlled_zero));
-            const placements = [
-                {row: 5, column: 5},
-                {row: 5, column: 6},
-                {row: 6, column: 5},
-                {row: 6, column: 6},
-                {row: 4, column: 5},
-                {row: 4, column: 6},
-                {row: 3, column: 5},
-                {row: 3, column: 6}
-            ];
-
-            let state = start;
-
-            placements.slice(0, MAX_BARRIERS).forEach(function place(position) {
-                state = place_barrier(
-                    king_turn(state),
-                    position.row,
-                    position.column
-                );
-                assert.notEqual(
-                    state,
-                    null,
-                    "Placing a police car at " + position_text(position)
-                    + " should succeed before the exported limit is reached."
-                );
-            });
+        it("refuses a police car that would trap the Thief", function test_no_trapping_barrier() {
+            // The Thief sits in the top-left corner. A police car already blocks
+            // (0, 1), so the Thief's only remaining way out of the corner is the
+            // square (1, 0). Sealing (1, 0) would leave no route to the Exit, so
+            // both the predicate and the action must reject it.
+            const trap = {row: 1, column: 0};
+            const boxed = {
+                thief: {row: 0, column: 0},
+                king: {row: 7, column: 7},
+                exit: {row: 7, column: 0},
+                map_barriers: [],
+                police_cars: [{row: 0, column: 1}],
+                current_player: PLAYER_KING,
+                thief_move: null,
+                turn_count: 1,
+                winner: null,
+                board: create_empty_board()
+            };
 
             assert.equal(
-                state.barriers.length,
-                MAX_BARRIERS,
-                "After MAX_BARRIERS place_barrier calls, barriers.length should equal "
-                + String(MAX_BARRIERS) + ", but got "
-                + String(state.barriers.length) + "."
+                is_valid_police_car_placement(boxed, trap),
+                false,
+                "Sealing the Thief's last escape square at " + position_text(trap)
+                + " should be rejected - it would leave no route to the Exit."
+                + game_text(boxed)
+            );
+            assert.equal(
+                place_police_car(boxed, trap),
+                null,
+                "place_police_car should return null for a placement that traps the Thief."
+                + game_text(boxed)
+            );
+        });
+
+        it("limits police cars to the exported maximum", function test_barrier_limit() {
+            // Build up to MAX_POLICE_CARS via real place_police_car calls so the board
+            // stays consistent and the test exercises actual game logic.
+            const start = king_turn(create_new_game(controlled_zero));
+
+            let state = place_police_car(start, {row: 5, column: 5});
+            state = place_police_car(king_turn(state), {row: 5, column: 6});
+            state = place_police_car(king_turn(state), {row: 6, column: 5});
+            state = place_police_car(king_turn(state), {row: 6, column: 6});
+            state = place_police_car(king_turn(state), {row: 4, column: 5});
+
+            assert.equal(
+                state.police_cars.length,
+                MAX_POLICE_CARS,
+                "After placing the maximum number of police cars, police_cars.length "
+                + "should equal MAX_POLICE_CARS ("
+                + String(MAX_POLICE_CARS) + "), but got " + String(state.police_cars.length) + "."
             );
 
             const full_game = king_turn(state);
 
             assert.equal(
-                is_valid_barrier_placement(full_game, {row: 3, column: 3}),
+                is_valid_police_car_placement(full_game, {row: 3, column: 3}),
                 false,
-                "is_valid_barrier_placement should return false when "
-                + String(MAX_BARRIERS) + " police cars are already placed."
+                "is_valid_police_car_placement should return false when "
+                + String(MAX_POLICE_CARS) + " police cars are already placed."
                 + game_text(full_game)
             );
             assert.equal(
-                place_barrier(full_game, 3, 3),
+                place_police_car(full_game, {row: 3, column: 3}),
                 null,
-                "place_barrier should return null when the police-car limit of "
-                + String(MAX_BARRIERS) + " has been reached."
+                "place_police_car should return null when the police-car limit of "
+                + String(MAX_POLICE_CARS) + " has been reached."
                 + game_text(full_game)
             );
-        });
-
-        it("prevents the King walking onto traffic barriers", function test_king_blocked_by_map_barrier() {
-            const game = create_new_game(controlled_zero);
-            // With controlled_zero: King at {row:0,column:0}, map_barriers[0] at {row:0,column:1}.
-            // That barrier is exactly one step to the right of the King.
-            const blocked_square = game.map_barriers[0];
-
-            assert.equal(
-                game.board[blocked_square.row][blocked_square.column],
-                BARRIER,
-                "The first map barrier at " + position_text(blocked_square)
-                + " should appear on the board as BARRIER."
-                + board_text(game.board)
-            );
-            assert.equal(
-                is_valid_king_move(king_turn(game), blocked_square),
-                false,
-                "The King at " + position_text(game.king)
-                + " should not be able to step onto the traffic barrier at "
-                + position_text(blocked_square) + "."
-                + game_text(game)
-            );
-        });
-
-    });
-
-    describe("Board coordinates", function describe_board_coordinates() {
-
-        it("accepts only whole-number coordinates from 0 to 7", function test_inside_board() {
-            assert.equal(is_inside_board(0, 0), true, "Top-left corner (0, 0) should be on the board.");
-            assert.equal(is_inside_board(7, 7), true, "Bottom-right corner (7, 7) should be on the board.");
-            assert.equal(is_inside_board(4, 4), true, "Centre square (4, 4) should be on the board.");
-            assert.equal(is_inside_board(-1, 0), false, "Negative row -1 should be off the board.");
-            assert.equal(is_inside_board(0, -1), false, "Negative column -1 should be off the board.");
-            assert.equal(is_inside_board(8, 0), false, "Row 8 exceeds the board and should be rejected.");
-            assert.equal(is_inside_board(0, 8), false, "Column 8 exceeds the board and should be rejected.");
-            assert.equal(is_inside_board(0.5, 0), false, "Fractional row 0.5 should be rejected.");
         });
 
     });

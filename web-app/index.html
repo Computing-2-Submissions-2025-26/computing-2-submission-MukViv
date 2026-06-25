@@ -41,7 +41,7 @@
                 <button id="king-move" type="button" aria-pressed="true">
                     King Move [K]
                 </button>
-                <button id="king-barrier" type="button" aria-pressed="false">
+                <button id="king-police-car" type="button" aria-pressed="false">
                     Police Car [P]
                 </button>
                 <button id="skip-turn" type="button">Skip Turn [L]</button>
@@ -80,7 +80,7 @@
             <p id="turn"></p>
             <p id="timer" class="timer"></p>
             <p id="die" class="visually-hidden"></p>
-            <p id="barriers"></p>
+            <p id="police-cars"></p>
             <div class="status-action">
                 <p id="message" class="message" aria-live="polite">
                     The Thief rolls first.
@@ -111,8 +111,9 @@
                 type="button"
                 aria-label="Skip how to play"
             >&times;</button>
-            <div class="intro-step">
+            <div id="intro-step" class="intro-step">
                 <img
+                    id="intro-icon"
                     class="intro-icon"
                     src="assets/images/chess-thieves-crest.svg"
                     alt=""
@@ -120,7 +121,7 @@
                 >
                 <div class="intro-copy">
                     <h2 id="intro-title" class="intro-title">Chess Thieves</h2>
-                    <p class="intro-body">A thief has stolen a set of chess pieces and is trying to escape. The king needs to catch them before they reach the exit.</p>
+                    <p id="intro-body" class="intro-body">A thief has stolen a set of chess pieces and is trying to escape. The king needs to catch them before they reach the exit.</p>
                 </div>
             </div>
             <div class="intro-step is-hidden">

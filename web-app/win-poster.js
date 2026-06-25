@@ -1,9 +1,18 @@
-/*jslint browser: true */
+/*jslint browser*/
 
-function createWinPosterController(config) {
+/**
+ * Builds the winning-video poster controller for Chess Thieves.
+ * @param {object} config Winner constant, video sources, and display time.
+ * @returns {object} Controls for showing and clearing the win poster.
+ */
+const createWinPosterController = function createWinPosterController(config) {
     let win_poster_timer = null;
 
-    function clear_win_poster() {
+    /**
+     * Removes any visible win poster and cancels its pending hide timer.
+     * @returns {undefined}
+     */
+    const clear_win_poster = function clear_win_poster() {
         const layer = document.querySelector(".win-poster-layer");
 
         if (win_poster_timer !== null) {
@@ -14,9 +23,14 @@ function createWinPosterController(config) {
         if (layer !== null) {
             layer.remove();
         }
-    }
+    };
 
-    function trigger_win_poster(winner) {
+    /**
+     * Plays the winner's video poster centred over the board.
+     * @param {string} winner The winning player constant.
+     * @returns {undefined}
+     */
+    const trigger_win_poster = function trigger_win_poster(winner) {
         const board_area = document.querySelector(".board-area");
         const frame = document.createElement("div");
         const layer = document.createElement("div");
@@ -97,12 +111,12 @@ function createWinPosterController(config) {
             layer.remove();
             win_poster_timer = null;
         }, config.display_time);
-    }
+    };
 
     return Object.freeze({
-        clear_win_poster: clear_win_poster,
-        trigger_win_poster: trigger_win_poster
+        clear_win_poster,
+        trigger_win_poster
     });
-}
+};
 
-export default Object.freeze(createWinPosterController);
+export {createWinPosterController};

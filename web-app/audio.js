@@ -72,69 +72,12 @@ const createAudioController = function createAudioController(config) {
         osc.stop(start + duration + 0.03);
     };
 
-    const make_shaper_curve = function make_shaper_curve(amount) {
-        const size = 1024;
-        const curve = new Float32Array(size);
-        let i = 0;
-
-        while (i < size) {
-            const x = (i / (size - 1)) * 2 - 1;
-
-            curve[i] = Math.tanh(x * amount);
-            i += 1;
-        }
-
-        return curve;
-    };
-
-    const wood_knock = function wood_knock(start, gain, base, out) {
-        const ctx = audio_context;
-        const length = Math.floor(ctx.sampleRate * 0.005);
-        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        const modes = [
-            [1, 16, 1, 0.055],
-            [1.59, 13, 0.55, 0.045],
-            [2.71, 10, 0.38, 0.035],
-            [4.16, 8, 0.22, 0.028]
-        ];
-        let i = 0;
-        let k = 0;
-
-        while (i < length) {
-            data[i] = Math.random() * 2 - 1;
-            i += 1;
-        }
-
-        while (k < modes.length) {
-            const mode = modes[k];
-            const src = ctx.createBufferSource();
-            const band = ctx.createBiquadFilter();
-            const env = ctx.createGain();
-
-            src.buffer = buffer;
-            band.type = "bandpass";
-            band.frequency.value = (
-                base * mode[0] * (0.95 + Math.random() * 0.1)
-            );
-            band.Q.value = mode[1];
-            env.gain.setValueAtTime(gain * mode[2], start);
-            env.gain.exponentialRampToValueAtTime(0.0001, start + mode[3]);
-            src.connect(band);
-            band.connect(env);
-            env.connect(out);
-            src.start(start);
-            src.stop(start + 0.1);
-            k += 1;
-        }
-    };
-
     const sound_move = function sound_move() {
         play_file_sound(config.move_src, 0.6);
     };
 
-    const sound_barrier = function sound_barrier() {
-        play_file_sound(config.barrier_src, 0.6);
+    const sound_police_car = function sound_police_car() {
+        play_file_sound(config.police_car_src, 0.6);
     };
 
     const sound_victor = function sound_victor(winner) {
@@ -148,43 +91,15 @@ const createAudioController = function createAudioController(config) {
         );
     };
 
+    // A short series of blips with widening gaps, suggesting a die tumbling
+    // and settling.
     const sound_dice = function sound_dice() {
-        const ctx = ensure_audio();
-        const knocks = 6;
         let i = 0;
-        let t;
-        let out;
-        let low;
-        let limiter;
+        let delay = 0.05;
 
-        if (ctx === null) {
-            return;
-        }
-
-        out = ctx.createGain();
-        low = ctx.createBiquadFilter();
-        limiter = ctx.createWaveShaper();
-        t = ctx.currentTime + 1;
-
-        out.gain.value = 2.2;
-        low.type = "lowpass";
-        low.frequency.value = 4000;
-        limiter.curve = make_shaper_curve(1.2);
-        limiter.oversample = "2x";
-        out.connect(limiter);
-        limiter.connect(low);
-        low.connect(ctx.destination);
-
-        while (i < knocks) {
-            const frac = i / knocks;
-            const gain = (
-                0.9 * (0.3 + 0.7 * (1 - frac))
-                * (0.8 + Math.random() * 0.4)
-            );
-            const base = 250 * (0.85 + Math.random() * 0.3);
-
-            wood_knock(t, gain, base, out);
-            t += 0.1 * (0.5 + Math.random()) * (1 + frac);
+        while (i < 5) {
+            play_tone(200 + Math.random() * 120, 0.05, "triangle", 0.18, delay);
+            delay += 0.06 + i * 0.03;
             i += 1;
         }
     };
@@ -238,9 +153,9 @@ const createAudioController = function createAudioController(config) {
     };
 
     return Object.freeze({
-        sound_barrier,
         sound_dice,
         sound_move,
+        sound_police_car,
         sound_tick,
         sound_victor,
         start_audio,
