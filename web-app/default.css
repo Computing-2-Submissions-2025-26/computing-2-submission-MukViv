@@ -359,11 +359,17 @@ h1 {
 }
 
 .square.thief .piece-image,
-.square.thief-at-the-exit .piece-image,
+.square.thief-at-the-exit .piece-image {
+    max-height: 100%;
+    max-width: 100%;
+}
+
 .square.king .piece-image,
 .square.king-caught-the-thief .piece-image {
-    max-height: 92%;
-    max-width: 92%;
+    height: 110%;
+    max-height: 110%;
+    max-width: 110%;
+    width: 110%;
 }
 
 .square.barrier .piece-image,
@@ -776,6 +782,15 @@ button:not(:disabled):active {
     margin: 0;
     object-fit: contain;
     width: 190px;
+}
+
+/* The police-king art is a tall, narrow piece, so in the default square box it
+   letterboxes down to a thin sliver. Give the king step a taller, snugger box
+   so the piece reads at a proper size. */
+.intro-icon[src$="characters/king.png"] {
+    flex-basis: 150px;
+    height: 230px;
+    width: 150px;
 }
 
 .intro-copy {

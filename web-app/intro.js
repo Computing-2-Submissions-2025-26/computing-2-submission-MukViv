@@ -1,32 +1,6 @@
 /*jslint browser*/
 /*global requestAnimationFrame*/
-
-const INTRO_STEPS = [
-    {
-        icon: "assets/images/chess-thieves-crest.svg",
-        title: "Chess Thieves",
-        body: (
-            "A thief has stolen a set of chess pieces and is trying to escape. "
-            + "The king needs to catch them before they reach the exit."
-        )
-    },
-    {
-        icon: "assets/characters/thief-sack.png",
-        title: "Thief",
-        body: (
-            "Reach the EXIT square within 15 turns to win. Roll the dice to "
-            + "move and don't get caught!"
-        )
-    },
-    {
-        icon: "assets/characters/king.png",
-        title: "King",
-        body: (
-            "Catch the Thief to win. Place police cars to block their path. You"
-            + " also win if the Thief has not escaped after 15 turns."
-        )
-    }
-];
+//This file is for controlling the the pop up tutorial instructions
 
 /**
  * Builds the how-to-play pop up window for Chess Thieves.
@@ -35,6 +9,7 @@ const INTRO_STEPS = [
  */
 const createIntroController = function createIntroController(config) {
     const elements = config.elements;
+    const steps = Array.from(elements.overlay.querySelectorAll(".intro-step"));
     let intro_index = 0;
 
     /**
@@ -54,7 +29,7 @@ const createIntroController = function createIntroController(config) {
 
         elements.dots.textContent = "";
 
-        while (i < INTRO_STEPS.length) {
+        while (i < steps.length) {
             const dot = document.createElement("span");
 
             dot.className = (
@@ -72,12 +47,19 @@ const createIntroController = function createIntroController(config) {
      * @returns {undefined}
      */
     const render_intro_step = function render_intro_step() {
-        const step = INTRO_STEPS[intro_index];
-        const is_last = intro_index === INTRO_STEPS.length - 1;
+        const current_step = steps[intro_index];
+        const current_title = current_step.querySelector(".intro-title");
+        const is_last = intro_index === steps.length - 1;
 
-        elements.icon.src = step.icon;
-        elements.title.textContent = step.title;
-        elements.body.textContent = step.body;
+        steps.forEach(function toggle_intro_step(step, index) {
+            step.classList.toggle("is-hidden", index !== intro_index);
+            step.setAttribute("aria-hidden", String(index !== intro_index));
+            step.classList.remove("intro-step-enter");
+        });
+        if (current_title !== null && current_title.id !== "") {
+            elements.overlay.setAttribute("aria-labelledby", current_title.id);
+        }
+
         elements.back.disabled = intro_index === 0;
         elements.next.textContent = (
             is_last
@@ -86,10 +68,9 @@ const createIntroController = function createIntroController(config) {
         );
         build_intro_dots();
 
-        elements.step.classList.remove("intro-step-enter");
         requestAnimationFrame(function reflow_step() {
             requestAnimationFrame(function add_enter() {
-                elements.step.classList.add("intro-step-enter");
+                current_step.classList.add("intro-step-enter");
             });
         });
     };
@@ -108,7 +89,7 @@ const createIntroController = function createIntroController(config) {
      * @returns {undefined}
      */
     const go_intro_next = function go_intro_next() {
-        if (intro_index >= INTRO_STEPS.length - 1) {
+        if (intro_index >= steps.length - 1) {
             close_intro();
             return;
         }

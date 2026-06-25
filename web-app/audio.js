@@ -1,21 +1,13 @@
 /*jslint browser*/
 
-// Audio controller for Chess Thieves. Plays imported mp3 effects and the
-// background music track, plus two synthesized sounds (the dice roll and the
-// countdown tick) generated with the Web Audio API.
+/*This file is for controlling imported mp3 audio files and
+generating sound effects using the Web Audio API (frequencies).
+*/
 
-const MUSIC_VOLUME = 0.08;
-
-const createAudioController = function createAudioController(config) {
+function createAudioController(config) {
     let audio_context = null;
     let music_enabled = false;
-
-    config.bg_music.volume = MUSIC_VOLUME;
-
-    // Creates the AudioContext on first use and resumes it if the browser
-    // suspended it before the first user gesture. Returns null when the
-    // browser has no Web Audio support.
-    const ensure_audio = function ensure_audio() {
+    function ensure_audio() {
         if (audio_context === null) {
             const Ctx = window.AudioContext || window.webkitAudioContext;
 
@@ -23,34 +15,34 @@ const createAudioController = function createAudioController(config) {
                 return null;
             }
 
-            audio_context = new Ctx();
+            try {
+                audio_context = new Ctx();
+            } catch (ignore) {
+                audio_context = null;
+                return null;
+            }
         }
 
-        if (audio_context.state === "suspended") {
+        if (audio_context !== null && audio_context.state === "suspended") {
             audio_context.resume();
         }
 
         return audio_context;
-    };
-
-    // Plays a one-shot mp3 file. Browsers reject playback that happens before
-    // a user gesture, so a rejected promise is ignored rather than thrown.
-    const play_file_sound = function play_file_sound(source, volume) {
+    }
+    function play_file_sound(source, volume) {
         const sfx = new window.Audio(source);
 
         sfx.volume = volume;
 
         const played = sfx.play();
 
-        if (played !== undefined) {
+        if (played !== undefined && typeof played.catch === "function") {
             played.catch(function ignore_blocked_sound() {
                 return undefined;
             });
         }
-    };
-
-    // Plays a single shaped oscillator note. Used for the dice roll and tick.
-    const play_tone = function play_tone(freq, duration, type, gain, delay) {
+    }
+    function play_tone(freq, duration, type, gain, delay) {
         const ctx = ensure_audio();
 
         if (ctx === null) {
@@ -70,17 +62,68 @@ const createAudioController = function createAudioController(config) {
         env.connect(ctx.destination);
         osc.start(start);
         osc.stop(start + duration + 0.03);
-    };
+    }
+    function make_shaper_curve(amount) {
+        const size = 1024;
+        const curve = new Float32Array(size);
+        let i = 0;
 
-    const sound_move = function sound_move() {
+        while (i < size) {
+            const x = (i / (size - 1)) * 2 - 1;
+            curve[i] = Math.tanh(x * amount);
+            i += 1;
+        }
+
+        return curve;
+    }
+    function wood_knock(start, gain, base, out) {
+        const ctx = audio_context;
+        const length = Math.floor(ctx.sampleRate * 0.005);
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        const modes = [
+            [1, 16, 1, 0.055],
+            [1.59, 13, 0.55, 0.045],
+            [2.71, 10, 0.38, 0.035],
+            [4.16, 8, 0.22, 0.028]
+        ];
+        let i = 0;
+        let k = 0;
+
+        while (i < length) {
+            data[i] = Math.random() * 2 - 1;
+            i += 1;
+        }
+
+        while (k < modes.length) {
+            const mode = modes[k];
+            const src = ctx.createBufferSource();
+            const band = ctx.createBiquadFilter();
+            const env = ctx.createGain();
+
+            src.buffer = buffer;
+            band.type = "bandpass";
+            band.frequency.value = (
+                base * mode[0] * (0.95 + Math.random() * 0.1)
+            );
+            band.Q.value = mode[1];
+            env.gain.setValueAtTime(gain * mode[2], start);
+            env.gain.exponentialRampToValueAtTime(0.0001, start + mode[3]);
+            src.connect(band);
+            band.connect(env);
+            env.connect(out);
+            src.start(start);
+            src.stop(start + 0.1);
+            k += 1;
+        }
+    }
+    function sound_move() {
         play_file_sound(config.move_src, 0.6);
-    };
-
-    const sound_police_car = function sound_police_car() {
+    }
+    function sound_police_car() {
         play_file_sound(config.police_car_src, 0.6);
-    };
-
-    const sound_victor = function sound_victor(winner) {
+    }
+    function sound_victor(winner) {
         play_file_sound(
             (
                 winner === config.player_thief
@@ -89,22 +132,64 @@ const createAudioController = function createAudioController(config) {
             ),
             0.75
         );
-    };
+    }
+    function sound_dice() {
+        const ctx = ensure_audio();
 
-    // A short series of blips with widening gaps, suggesting a die tumbling
-    // and settling.
-    const sound_dice = function sound_dice() {
+        if (ctx === null) {
+            return;
+        }
+
+        const out = ctx.createGain();
+        const low = ctx.createBiquadFilter();
+        const limiter = ctx.createWaveShaper();
+        const knocks = 6;
+        let t = ctx.currentTime + 1;
         let i = 0;
-        let delay = 0.05;
 
-        while (i < 5) {
-            play_tone(200 + Math.random() * 120, 0.05, "triangle", 0.18, delay);
-            delay += 0.06 + i * 0.03;
+        out.gain.value = 2.2;
+        low.type = "lowpass";
+        low.frequency.value = 4000;
+        limiter.curve = make_shaper_curve(1.2);
+        limiter.oversample = "2x";
+        out.connect(limiter);
+        limiter.connect(low);
+        low.connect(ctx.destination);
+
+        while (i < knocks) {
+            const frac = i / knocks;
+            const gain = (
+                0.9 * (0.3 + 0.7 * (1 - frac))
+                * (0.8 + Math.random() * 0.4)
+            );
+            const base = 250 * (0.85 + Math.random() * 0.3);
+
+            wood_knock(t, gain, base, out);
+            t += 0.1 * (0.5 + Math.random()) * (1 + frac);
             i += 1;
         }
-    };
+    }
+    function sound_poster_thump() {
+        const ctx = ensure_audio();
 
-    const sound_tick = function sound_tick(urgent) {
+        if (ctx === null) {
+            return;
+        }
+
+        const start = ctx.currentTime + 0.1;
+        const out = ctx.createGain();
+        const low = ctx.createBiquadFilter();
+
+        out.gain.value = 2.8;
+        low.type = "lowpass";
+        low.frequency.value = 900;
+        out.connect(low);
+        low.connect(ctx.destination);
+
+        wood_knock(start, 1.15, 95, out);
+        play_tone(72, 0.18, "sine", 0.28, 0.1);
+    }
+    function sound_tick(urgent) {
         play_tone(
             (
                 urgent
@@ -116,10 +201,13 @@ const createAudioController = function createAudioController(config) {
             0.22,
             0
         );
-    };
+    }
+    function start_music() {
+        if (config.music_src === "") {
+            return;
+        }
 
-    const start_music = function start_music() {
-        if (config.music_src === "" || music_enabled) {
+        if (music_enabled) {
             return;
         }
 
@@ -131,37 +219,36 @@ const createAudioController = function createAudioController(config) {
 
         music_enabled = true;
 
-        if (played !== undefined) {
+        if (played !== undefined && typeof played.catch === "function") {
             played.catch(function music_unavailable() {
                 music_enabled = false;
             });
         }
-    };
-
-    const stop_music = function stop_music() {
+    }
+    function stop_music() {
         config.bg_music.pause();
         config.bg_music.currentTime = 0;
         music_enabled = false;
-    };
-
-    const start_audio = function start_audio(should_start_music) {
+    }
+    function start_audio(should_start_music) {
         ensure_audio();
 
         if (should_start_music) {
             start_music();
         }
-    };
+    }
 
     return Object.freeze({
         sound_dice,
         sound_move,
         sound_police_car,
+        sound_poster_thump,
         sound_tick,
         sound_victor,
         start_audio,
         start_music,
         stop_music
     });
-};
+}
 
 export {createAudioController};

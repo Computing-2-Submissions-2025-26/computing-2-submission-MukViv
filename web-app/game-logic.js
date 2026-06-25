@@ -1,18 +1,11 @@
 /*jslint */
 /**
- * Pure rule engine for Chess Thieves.
+ * Rules/logic for Chess Thieves.
  *
  * Chess Thieves is played on an 8 by 8 board. The Thief starts on the bottom
- * row and tries to reach the Exit. The King starts near the top and tries to
- * catch the Thief or delay the escape until the turn limit is passed. The
- * browser interface imports this module, but this file does not use the DOM,
- * so another project can reuse the same functions for a different interface,
- * a command-line version, or automated tests.
+ * row and tries to reach the Exit. The King starts at the top and tries to
+ * catch the Thief or delay the escape until the turn limit (15) is passed.
  *
- * Public functions never mutate the game object they receive. A successful
- * action returns a new game state; an illegal action returns null. That means
- * callers should always replace their saved game state only after checking
- * that the return value is not null.
  *
  * @namespace ChessThieves
  */

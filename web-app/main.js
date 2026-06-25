@@ -77,10 +77,6 @@ const dice_roll_image = document.querySelector("#dice-roll-image");
 const dice_result_image = document.querySelector("#dice-result-image");
 const dice_live_element = document.querySelector("#dice-live");
 const intro_overlay = document.querySelector("#intro-overlay");
-const intro_step = document.querySelector("#intro-step");
-const intro_icon = document.querySelector("#intro-icon");
-const intro_title = document.querySelector("#intro-title");
-const intro_body = document.querySelector("#intro-body");
 const intro_dots = document.querySelector("#intro-dots");
 const intro_back = document.querySelector("#intro-back");
 const intro_next = document.querySelector("#intro-next");
@@ -176,13 +172,9 @@ const win_poster_controller = createWinPosterController({
 const intro_controller = createIntroController({
     elements: {
         back: intro_back,
-        body: intro_body,
         dots: intro_dots,
-        icon: intro_icon,
         next: intro_next,
-        overlay: intro_overlay,
-        step: intro_step,
-        title: intro_title
+        overlay: intro_overlay
     },
     on_close: function intro_closed() {
         start_audio();

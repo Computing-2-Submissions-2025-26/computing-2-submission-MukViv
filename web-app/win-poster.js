@@ -1,4 +1,5 @@
 /*jslint browser*/
+//This file is for controlling the video that plays when someone wins
 
 /**
  * Builds the winning-video poster controller for Chess Thieves.
@@ -54,10 +55,9 @@ const createWinPosterController = function createWinPosterController(config) {
         board_rect = board_area.getBoundingClientRect();
         poster_size = Math.min(board_rect.width * 0.64, 462);
 
-        frame.className = "win-poster-frame";
+        frame.className = "win-poster-frame is-loading";
         frame.style.maxWidth = String(board_rect.width * 0.75) + "px";
         frame.style.maxHeight = String(board_rect.height * 0.75) + "px";
-        frame.style.visibility = "hidden";
         frame.style.width = String(poster_size) + "px";
 
         video.className = "win-poster-video";
@@ -86,7 +86,14 @@ const createWinPosterController = function createWinPosterController(config) {
 
                 frame.style.width = String(frame_width) + "px";
                 frame.style.removeProperty("height");
-                frame.style.visibility = "visible";
+            },
+            {once: true}
+        );
+
+        video.addEventListener(
+            "loadeddata",
+            function show_loaded_poster() {
+                frame.classList.remove("is-loading");
             },
             {once: true}
         );
@@ -94,6 +101,10 @@ const createWinPosterController = function createWinPosterController(config) {
         frame.append(video);
         layer.append(frame);
         board_area.append(layer);
+
+        if (video.readyState >= 2) {
+            frame.classList.remove("is-loading");
+        }
 
         video.addEventListener("ended", function hide_finished_poster() {
             layer.classList.add("is-leaving");
