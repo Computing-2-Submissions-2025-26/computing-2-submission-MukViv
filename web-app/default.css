@@ -691,6 +691,10 @@ button:not(:disabled):active {
     z-index: 1001;
 }
 
+.win-poster-frame.is-loading {
+    visibility: hidden;
+}
+
 .win-poster-video {
     display: block;
     height: auto;

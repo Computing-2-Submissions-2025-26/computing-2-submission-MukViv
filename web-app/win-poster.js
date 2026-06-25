@@ -106,12 +106,9 @@ const createWinPosterController = function createWinPosterController(config) {
             frame.classList.remove("is-loading");
         }
 
-        video.addEventListener("ended", function hide_finished_poster() {
-            layer.classList.add("is-leaving");
-            win_poster_timer = setTimeout(function remove_finished_poster() {
-                layer.remove();
-                win_poster_timer = null;
-            }, 250);
+        video.addEventListener("ended", function remove_finished_poster() {
+            layer.remove();
+            win_poster_timer = null;
         }, {once: true});
 
         video.play().catch(function ignore_autoplay_block() {
