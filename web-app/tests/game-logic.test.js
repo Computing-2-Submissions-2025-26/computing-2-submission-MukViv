@@ -3,24 +3,15 @@ import assert from "node:assert/strict";
 import ChessThieves from "../game-logic.js";
 
 const {
-    BARRIER,
     MAX_POLICE_CARS,
     MAX_TURNS,
     PLAYER_KING,
     PLAYER_THIEF,
-    POLICE_CAR,
     check_winner,
-    create_empty_board,
     create_new_game,
     is_game_ended,
-    is_path_clear,
     is_valid_police_car_placement,
-    is_valid_bishop_move,
     is_valid_king_move,
-    is_valid_knight_move,
-    is_valid_pawn_move,
-    is_valid_queen_move,
-    is_valid_rook_move,
     is_valid_thief_move,
     move_king,
     move_thief,
@@ -29,6 +20,10 @@ const {
     roll_thief_die,
     set_thief_move
 } = ChessThieves;
+
+const BARRIER = "barrier";
+const POLICE_CAR = "police_car";
+const BOARD_SIZE = 8;
 
 // Returns 0, making create_new_game deterministic.
 // With this seed: thief = {row:7, column:0}, exit = {row:1, column:0},
@@ -40,6 +35,35 @@ const controlled_zero = function controlled_zero() {
 // Forces current_player to PLAYER_KING without altering any other field.
 const king_turn = function king_turn(game = create_new_game()) {
     return Object.assign({}, game, {current_player: PLAYER_KING});
+};
+
+const create_test_board = function create_test_board() {
+    let board = [];
+    let row = 0;
+
+    while (row < BOARD_SIZE) {
+        let columns = [];
+        let column = 0;
+
+        while (column < BOARD_SIZE) {
+            columns.push("empty");
+            column += 1;
+        }
+
+        board.push(columns);
+        row += 1;
+    }
+
+    return board;
+};
+
+const game_for_thief_move = function game_for_thief_move(board, thief) {
+    return Object.assign({}, create_new_game(), {
+        board,
+        thief,
+        king: {row: 0, column: 0},
+        exit: {row: 7, column: 7}
+    });
 };
 
 const position_text = function position_text(position) {
@@ -187,35 +211,36 @@ describe("Chess Thieves", function describe_chess_thieves() {
     describe("Movement rules", function describe_movement_rules() {
 
         it("allows all five thief move types on an open board", function test_open_board_moves() {
-            const board = create_empty_board();
+            const board = create_test_board();
             const center = {row: 4, column: 4};
+            const game = game_for_thief_move(board, center);
 
             assert.equal(
-                is_valid_pawn_move(board, center, {row: 3, column: 4}),
+                is_valid_thief_move(game, "pawn", center, {row: 3, column: 4}),
                 true,
                 "Pawn should move one square up from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_knight_move(board, center, {row: 2, column: 5}),
+                is_valid_thief_move(game, "knight", center, {row: 2, column: 5}),
                 true,
                 "Knight should jump two up, one right from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_bishop_move(board, center, {row: 1, column: 1}),
+                is_valid_thief_move(game, "bishop", center, {row: 1, column: 1}),
                 true,
                 "Bishop should slide three squares diagonally from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_rook_move(board, center, {row: 4, column: 7}),
+                is_valid_thief_move(game, "rook", center, {row: 4, column: 7}),
                 true,
                 "Rook should slide three squares right from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_queen_move(board, center, {row: 0, column: 4}),
+                is_valid_thief_move(game, "queen", center, {row: 0, column: 4}),
                 true,
                 "Queen should slide four squares up from " + position_text(center) + "."
                 + board_text(board)
@@ -223,19 +248,19 @@ describe("Chess Thieves", function describe_chess_thieves() {
         });
 
         it("blocks sliding moves through traffic barriers", function test_path_blocked_by_barrier() {
-            const board = create_empty_board();
+            const board = create_test_board();
+            const start = {row: 4, column: 4};
+            const end = {row: 4, column: 7};
 
             board[4][5] = BARRIER;
 
             assert.equal(
-                is_path_clear(board, {row: 4, column: 4}, {row: 4, column: 7}),
-                false,
-                "A traffic barrier at row 4, column 5 should block the path "
-                + "from row 4, column 4 to row 4, column 7."
-                + board_text(board)
-            );
-            assert.equal(
-                is_valid_rook_move(board, {row: 4, column: 4}, {row: 4, column: 7}),
+                is_valid_thief_move(
+                    game_for_thief_move(board, start),
+                    "rook",
+                    start,
+                    end
+                ),
                 false,
                 "The Thief should not be able to rook-slide through a traffic barrier "
                 + "at row 4, column 5."
@@ -277,13 +302,20 @@ describe("Chess Thieves", function describe_chess_thieves() {
         });
 
         it("knight jumps over a traffic barrier in its path", function test_knight_jumps_barrier() {
-            const board = create_empty_board();
+            const board = create_test_board();
+            const start = {row: 4, column: 4};
+            const end = {row: 2, column: 5};
             // Place a barrier on the most direct route between the two squares.
             // Knight from (4,4) to (2,5): intermediate square (3,4) or (3,5).
             board[3][4] = BARRIER;
 
             assert.equal(
-                is_valid_knight_move(board, {row: 4, column: 4}, {row: 2, column: 5}),
+                is_valid_thief_move(
+                    game_for_thief_move(board, start),
+                    "knight",
+                    start,
+                    end
+                ),
                 true,
                 "A knight move from row 4, column 4 to row 2, column 5 should succeed "
                 + "even with a traffic barrier at row 3, column 4 on the apparent path — "
@@ -477,29 +509,30 @@ describe("Chess Thieves", function describe_chess_thieves() {
     describe("Pawn movement", function describe_pawn_movement() {
 
         it("pawn moves exactly one square in any direction", function test_pawn_four_directions() {
-            const board = create_empty_board();
+            const board = create_test_board();
             const center = {row: 4, column: 4};
+            const game = game_for_thief_move(board, center);
 
             assert.equal(
-                is_valid_pawn_move(board, center, {row: 3, column: 4}),
+                is_valid_thief_move(game, "pawn", center, {row: 3, column: 4}),
                 true,
                 "Pawn should move one square up from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_pawn_move(board, center, {row: 5, column: 4}),
+                is_valid_thief_move(game, "pawn", center, {row: 5, column: 4}),
                 true,
                 "Pawn should move one square down from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_pawn_move(board, center, {row: 4, column: 3}),
+                is_valid_thief_move(game, "pawn", center, {row: 4, column: 3}),
                 true,
                 "Pawn should move one square left from " + position_text(center) + "."
                 + board_text(board)
             );
             assert.equal(
-                is_valid_pawn_move(board, center, {row: 4, column: 5}),
+                is_valid_thief_move(game, "pawn", center, {row: 4, column: 5}),
                 true,
                 "Pawn should move one square right from " + position_text(center) + "."
                 + board_text(board)
@@ -507,10 +540,16 @@ describe("Chess Thieves", function describe_chess_thieves() {
         });
 
         it("rejects diagonal pawn moves", function test_pawn_no_diagonal() {
-            const board = create_empty_board();
+            const board = create_test_board();
+            const start = {row: 4, column: 4};
 
             assert.equal(
-                is_valid_pawn_move(board, {row: 4, column: 4}, {row: 3, column: 3}),
+                is_valid_thief_move(
+                    game_for_thief_move(board, start),
+                    "pawn",
+                    start,
+                    {row: 3, column: 3}
+                ),
                 false,
                 "Pawn should not move diagonally — row 4, column 4 to row 3, column 3 "
                 + "must be rejected."
@@ -519,10 +558,16 @@ describe("Chess Thieves", function describe_chess_thieves() {
         });
 
         it("rejects pawn jumps", function test_pawn_no_jump() {
-            const board = create_empty_board();
+            const board = create_test_board();
+            const start = {row: 4, column: 4};
 
             assert.equal(
-                is_valid_pawn_move(board, {row: 4, column: 4}, {row: 2, column: 4}),
+                is_valid_thief_move(
+                    game_for_thief_move(board, start),
+                    "pawn",
+                    start,
+                    {row: 2, column: 4}
+                ),
                 false,
                 "Pawn should not jump two squares — row 4, column 4 to row 2, column 4 "
                 + "must be rejected."
@@ -818,7 +863,7 @@ describe("Chess Thieves", function describe_chess_thieves() {
                 thief_move: null,
                 turn_count: 1,
                 winner: null,
-                board: create_empty_board()
+                board: create_test_board()
             };
 
             assert.equal(

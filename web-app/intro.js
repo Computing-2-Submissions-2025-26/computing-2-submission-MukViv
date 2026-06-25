@@ -1,4 +1,3 @@
-/*jslint browser*/
 /*global requestAnimationFrame*/
 //This file is for controlling the the pop up tutorial instructions
 

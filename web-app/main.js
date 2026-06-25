@@ -1,16 +1,14 @@
-/*jslint browser*/
 // Music: "Sneaky Snooper" by Audionautix (audionautix.com)
 // Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 import ChessThieves from "./game-logic.js";
-const {
+const { //removes need for ChessThieves. all the time
     BOARD_SIZE,
     MAX_POLICE_CARS,
     MAX_TURNS,
     PLAYER_KING,
     PLAYER_THIEF,
     create_new_game,
-    get_square_label,
     is_valid_police_car_placement,
     is_valid_king_move,
     is_valid_thief_move,
@@ -126,6 +124,7 @@ let invalid_message;
 let next_cursor;
 let legal_action_for_square;
 let legal_label;
+let square_label;
 let square_class;
 let square_is_cursor;
 let add_square_content;
@@ -212,7 +211,7 @@ render_board = function render_board() {
         while (column < BOARD_SIZE) {
             const td = document.createElement("td");
             const square = document.createElement("button");
-            const label = get_square_label(game, row, column);
+            const label = square_label(row, column);
             const legal_action = legal_action_for_square(row, column);
 
             td.setAttribute("role", "gridcell");
@@ -676,6 +675,51 @@ legal_label = function legal_label(legal_action) {
     }
 
     return "";
+};
+square_label = function square_label(row, column) {
+    const position = {row, column};
+    const thief_is_here = (
+        game.thief.row === position.row
+        && game.thief.column === position.column
+    );
+    const king_is_here = (
+        game.king.row === position.row
+        && game.king.column === position.column
+    );
+    const exit_is_here = (
+        game.exit.row === position.row
+        && game.exit.column === position.column
+    );
+
+    if (thief_is_here && king_is_here) {
+        return "King caught the Thief";
+    }
+
+    if (thief_is_here && exit_is_here) {
+        return "Thief at the Exit";
+    }
+
+    if (thief_is_here) {
+        return "Thief";
+    }
+
+    if (king_is_here) {
+        return "King";
+    }
+
+    if (exit_is_here) {
+        return "Exit";
+    }
+
+    if (game.board[row][column] === "barrier") {
+        return "Barrier";
+    }
+
+    if (game.board[row][column] === "police_car") {
+        return "Police Car";
+    }
+
+    return "Empty";
 };
 square_class = function square_class(row, column, label, legal_action) {
     const classes = [
