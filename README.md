@@ -1,25 +1,30 @@
 # Computing 2 Coursework Submission.
 **CID**: [02613317]
 
-This is the submission template for your Computing 2 Applications coursework submission.
-
 ## Chess Thieves
 
-Chess Thieves is a turn-based board game where the Thief tries to escape with a 
-bag full of stolen chess pieces by
-reaching the Exit, while the King tries to catch the Thief or delay the escape
-past the turn limit (15 turns). Each player has a 20s window to act before their
-turn is automatically skipped.
+Chess Thieves is a turn-based chase game about a stolen set of chess pieces and
+a king who is trying to get his chess family back. The Thief starts at the bottom
+with the pieces and is trying to reach the Exit. The King starts from the top
+and must either catch the Thief or slow them down until the 15 turn limit
+has passed. The board begins with four permanent traffic barriers, so each match
+starts with a slightly different escape route.
 
-As a thief...
-You roll a dice to decide your move type based on chess moves 
-Try to reach the exit before 15 turns 
+# As the Thief...
+Roll the movement die, then move using the chess move type shown. The die has
+six faces: pawn appears twice, while knight, bishop, rook, and queen each appear
+once. This means pawn has a 2 in 6 chance, and every other move type has a 1 in
+6 chance. The Thief wins by reaching the Exit before the King catches them or the
+turn limit runs out. You may skip the turn if needed.
 
-As a king...
-You select between moving and placing a police car (max 5) that can block the thief 
-Try to catch the thief or prevent them from escaping within 15 turns
+# As the King...
+Choose between moving the King one square in any direction or placing a police
+car as a blocker. The King can place a maximum of five police cars, and a police
+car cannot be placed if it would completely trap the Thief with no route to the
+Exit. The King wins by landing on the Thief's square or by stopping the escape
+for more than 15 turns. You may skip the turn if needed.
 
-TURN THE SOUND ON
+# TURN THE SOUND ON
 
 
 ### Core Game Loop
