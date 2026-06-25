@@ -788,9 +788,9 @@ button:not(:disabled):active {
    letterboxes down to a thin sliver. Give the king step a taller, snugger box
    so the piece reads at a proper size. */
 .intro-icon[src$="characters/king.png"] {
-    flex-basis: 150px;
+    flex-basis: 190px;
     height: 230px;
-    width: 150px;
+    width: 190px;
 }
 
 .intro-copy {

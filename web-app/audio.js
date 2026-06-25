@@ -124,13 +124,19 @@ function createAudioController(config) {
         play_file_sound(config.police_car_src, 0.6);
     }
     function sound_victor(winner) {
+        const thief_won = winner === config.player_thief;
+
         play_file_sound(
             (
-                winner === config.player_thief
+                thief_won
                 ? config.thief_win_src
                 : config.king_win_src
             ),
-            0.75
+            (
+                thief_won
+                ? 0.75
+                : 1
+            )
         );
     }
     function sound_dice() {
@@ -147,7 +153,7 @@ function createAudioController(config) {
         let t = ctx.currentTime + 1;
         let i = 0;
 
-        out.gain.value = 2.2;
+        out.gain.value = 4.4;
         low.type = "lowpass";
         low.frequency.value = 4000;
         limiter.curve = make_shaper_curve(1.2);
@@ -214,6 +220,8 @@ function createAudioController(config) {
         if (config.bg_music.getAttribute("src") !== config.music_src) {
             config.bg_music.src = config.music_src;
         }
+
+        config.bg_music.volume = 0.8;
 
         const played = config.bg_music.play();
 
