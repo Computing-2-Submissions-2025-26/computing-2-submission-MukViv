@@ -31,12 +31,14 @@ Most action functions return a new game state when the action is legal and
 `null` when the action breaks a Chess Thieves rule. Keep the old state when a
 function returns `null`.
 
-Vizcom was used to turn brief sketches into coloured images 
-Chat gpt was used to add effects to 
-Claude was used to code the baseline for everything 
+Vizcom was used to turn brief sketches into coloured images (except dice
+related stuff - Fusion360).
+ChatGPT was used to make the win poster videos.
+Claude was used to code the baseline for most components, but predominantly was
+used in video/image/audio import, clipping, and resizing tasks for CSS, the win
+poster, and the intro.
 
 Music: "Sneaky Snooper" by Audionautix (audionautix.com)
 Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 Sound effects: Pixabay (pixabay.com)
-

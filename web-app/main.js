@@ -37,7 +37,7 @@ const KING_WIN_VIDEO = "assets/video/arrested.mp4";
 const THIEF_WIN_SOUND = "assets/audio/laugh.mp3";
 const KING_WIN_SOUND = "assets/audio/jail-sound.mp3";
 
-const rollResultImageByMoveType = {
+const roll_result_image_by_move_type = {
     bishop: "assets/images/roll-results/bishop.png",
     knight: "assets/images/roll-results/knight.png",
     pawn: "assets/images/roll-results/pawn.png",
@@ -45,7 +45,7 @@ const rollResultImageByMoveType = {
     rook: "assets/images/roll-results/rook.png"
 };
 
-const thiefImageByMoveType = {
+const thief_image_by_move_type = {
     bishop: "assets/characters/thief-bishop.png",
     knight: "assets/characters/thief-knight.png",
     pawn: "assets/characters/thief-pawn.png",
@@ -124,24 +124,77 @@ let cursor = {
     column: game.thief.column
 };
 let king_action = "move";
-let isDiceAnimationPlaying = false;
-let pendingRolledMoveType = null;
-let diceAnimationTimer = null;
-let diceResultTimer = null;
+let is_dice_animation_playing = false;
+let pending_rolled_move_type = null;
+let dice_animation_timer = null;
+let dice_result_timer = null;
 let pending_glide = null;
 let celebration_shown = false;
 let turn_seconds_left = TURN_TIME_LIMIT;
 let turn_timer_id = null;
 let last_turn_key = "";
 
-function render() {
+let render;
+let render_board;
+let render_status;
+let render_dice_button;
+let should_show_dice_button;
+let select_square;
+let focus_square;
+let play_selected_square;
+let move_cursor;
+let handle_keydown;
+let handle_global_shortcuts;
+let king_controls_available;
+let can_skip_turn;
+let restart_game;
+let apply_pass;
+let skip_turn;
+let create_dice_button;
+let handle_dice_button_keydown;
+let handle_dice_roll_request;
+let play_dice_roll_animation;
+let show_rolled_piece_image;
+let finish_dice_roll;
+let clamp;
+let focus_cursor_square;
+let invalid_message;
+let next_cursor;
+let legal_action_for_square;
+let legal_label;
+let square_class;
+let square_is_cursor;
+let add_square_content;
+let square_image;
+let square_text;
+let success_message;
+let clear_dice_result_timer;
+let clear_dice_animation_timer;
+let hide_dice_stage;
+let hide_rolled_piece_image;
+let screen_reader_dice_text;
+let choose_king_move;
+let choose_barrier;
+let animate_piece_glide;
+let maybe_celebrate;
+let prefers_reduced_motion;
+let turn_decision_key;
+let render_timer;
+let sync_turn_timer;
+let handle_turn_tick;
+let handle_turn_timeout;
+let start_turn_timer;
+let timeout_message;
+let skip_message;
+let start_audio;
+render = function render() {
     render_board();
     render_status();
     render_dice_button();
     maybe_celebrate();
     sync_turn_timer();
-}
-function render_board() {
+};
+render_board = function render_board() {
     board_element.innerHTML = "";
 
     const tbody = document.createElement("tbody");
@@ -161,7 +214,6 @@ function render_board() {
             const td = document.createElement("td");
             const square = document.createElement("button");
             const label = get_square_label(game, row, column);
-            const display_label = square_display_label(label);
             const legal_action = legal_action_for_square(row, column);
 
             td.setAttribute("role", "gridcell");
@@ -173,9 +225,9 @@ function render_board() {
             square.setAttribute(
                 "aria-label",
                 "Row " + String(row + 1) + ", column " + String(column + 1)
-                + ": " + display_label + legal_label(legal_action)
+                + ": " + label + legal_label(legal_action)
             );
-            square.title = display_label + legal_label(legal_action);
+            square.title = label + legal_label(legal_action);
             square.tabIndex = 0;
             add_square_content(square, label);
             square.addEventListener("click", select_square);
@@ -196,8 +248,8 @@ function render_board() {
         animate_piece_glide(pending_glide);
         pending_glide = null;
     }
-}
-function render_status() {
+};
+render_status = function render_status() {
     const winner = game.winner;
     const current_turn = (
         game.current_player === PLAYER_THIEF
@@ -234,12 +286,6 @@ function render_status() {
     move_button.disabled = disable_king_controls;
     barrier_button.disabled = disable_king_controls;
     skip_turn_button.disabled = !can_skip_turn();
-    dice_button.setAttribute("aria-keyshortcuts", "R");
-    move_button.setAttribute("aria-keyshortcuts", "K");
-    barrier_button.setAttribute("aria-keyshortcuts", "P");
-    skip_turn_button.setAttribute("aria-keyshortcuts", "L");
-    restart_button.setAttribute("aria-keyshortcuts", "N");
-    how_to_play_button.setAttribute("aria-keyshortcuts", "H");
     move_button.setAttribute(
         "aria-pressed",
         String(!disable_king_controls && king_action === "move")
@@ -258,35 +304,35 @@ function render_status() {
     } else {
         result_element.textContent = "No winner yet.";
     }
-}
-function render_dice_button() {
+};
+render_dice_button = function render_dice_button() {
     dice_button.classList.toggle(
         "is-hidden",
         !should_show_dice_button()
     );
-}
-function should_show_dice_button() {
+};
+should_show_dice_button = function should_show_dice_button() {
     return (
         game.current_player === PLAYER_THIEF
         && game.thief_move === null
         && game.winner === null
-        && !isDiceAnimationPlaying
+        && !is_dice_animation_playing
     );
-}
-function select_square(event) {
+};
+select_square = function select_square(event) {
     const row = Number(event.currentTarget.dataset.row);
     const column = Number(event.currentTarget.dataset.column);
 
     cursor = {row, column};
     play_selected_square(row, column);
-}
-function focus_square(event) {
+};
+focus_square = function focus_square(event) {
     cursor = {
         row: Number(event.currentTarget.dataset.row),
         column: Number(event.currentTarget.dataset.column)
     };
-}
-function play_selected_square(row, column) {
+};
+play_selected_square = function play_selected_square(row, column) {
     let next_game = null;
 
     if (game.winner !== null) {
@@ -344,16 +390,16 @@ function play_selected_square(row, column) {
 
     render();
     focus_cursor_square();
-}
-function move_cursor(row_change, column_change) {
+};
+move_cursor = function move_cursor(row_change, column_change) {
     cursor = {
         row: clamp(cursor.row + row_change, 0, BOARD_SIZE - 1),
         column: clamp(cursor.column + column_change, 0, BOARD_SIZE - 1)
     };
     render();
     focus_cursor_square();
-}
-function handle_keydown(event) {
+};
+handle_keydown = function handle_keydown(event) {
     const key = event.key.toLowerCase();
     const target = event.target;
     const focused_square = (
@@ -387,10 +433,10 @@ function handle_keydown(event) {
         }
     } else if (key === "r") {
         event.preventDefault();
-        handleDiceRollRequest();
+        handle_dice_roll_request();
     }
-}
-function handle_global_shortcuts(event) {
+};
+handle_global_shortcuts = function handle_global_shortcuts(event) {
     const key = event.key.toLowerCase();
 
     if (
@@ -404,7 +450,7 @@ function handle_global_shortcuts(event) {
 
     if (key === "r") {
         event.preventDefault();
-        handleDiceRollRequest();
+        handle_dice_roll_request();
     } else if (key === "n") {
         event.preventDefault();
         restart_game();
@@ -421,24 +467,24 @@ function handle_global_shortcuts(event) {
         event.preventDefault();
         choose_barrier();
     }
-}
-function king_controls_available() {
+};
+king_controls_available = function king_controls_available() {
     return (
         game.current_player === PLAYER_KING
         && game.winner === null
     );
-}
-function can_skip_turn() {
+};
+can_skip_turn = function can_skip_turn() {
     return (
         game.winner === null
-        && !isDiceAnimationPlaying
+        && !is_dice_animation_playing
     );
-}
-function restart_game() {
+};
+restart_game = function restart_game() {
     game = create_new_game();
     king_action = "move";
-    isDiceAnimationPlaying = false;
-    pendingRolledMoveType = null;
+    is_dice_animation_playing = false;
+    pending_rolled_move_type = null;
     pending_glide = null;
     celebration_shown = false;
     win_poster_controller.clear_win_poster();
@@ -452,13 +498,8 @@ function restart_game() {
     render();
     focus_cursor_square();
     audio_controller.start_music();
-}
-function skip_turn() {
-    if (!can_skip_turn()) {
-        return;
-    }
-
-    const message = skip_message();
+};
+apply_pass = function apply_pass(message) {
     const next_game = pass_turn(game);
 
     if (next_game !== null) {
@@ -471,52 +512,59 @@ function skip_turn() {
 
     render();
     focus_cursor_square();
-}
-function createDiceButton() {
+};
+skip_turn = function skip_turn() {
+    if (!can_skip_turn()) {
+        return;
+    }
+
+    apply_pass(skip_message());
+};
+create_dice_button = function create_dice_button() {
     dice_button_image.src = DICE_STATIONARY_IMAGE;
     dice_button.setAttribute("aria-label", "Roll movement dice");
-    dice_button.addEventListener("click", handleDiceRollRequest);
-    dice_button.addEventListener("keydown", handleDiceButtonKeydown);
-}
-function handleDiceButtonKeydown(event) {
+    dice_button.addEventListener("click", handle_dice_roll_request);
+    dice_button.addEventListener("keydown", handle_dice_button_keydown);
+};
+handle_dice_button_keydown = function handle_dice_button_keydown(event) {
     if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        handleDiceRollRequest();
+        handle_dice_roll_request();
     }
-}
-function handleDiceRollRequest() {
-    if (isDiceAnimationPlaying || !should_show_dice_button()) {
+};
+handle_dice_roll_request = function handle_dice_roll_request() {
+    if (is_dice_animation_playing || !should_show_dice_button()) {
         return;
     }
 
     audio_controller.sound_dice();
 
-    const move_type = getRandomMoveType();
+    const move_type = roll_thief_die();
 
-    isDiceAnimationPlaying = true;
-    pendingRolledMoveType = move_type;
+    is_dice_animation_playing = true;
+    pending_rolled_move_type = move_type;
     dice_live_element.textContent = "The Thief is rolling the movement dice.";
     message_element.textContent = "Rolling...";
     render();
-    playDiceRollAnimation(move_type);
-}
-function playDiceRollAnimation(move_type) {
+    play_dice_roll_animation(move_type);
+};
+play_dice_roll_animation = function play_dice_roll_animation(move_type) {
     hide_rolled_piece_image();
     clear_dice_animation_timer();
     dice_stage.classList.remove("is-hidden");
     dice_stage.setAttribute("aria-hidden", "true");
     dice_roll_image.classList.remove("is-hidden");
     dice_roll_image.src = DICE_ROLL_GIF + "?roll=" + String(Date.now());
-    diceAnimationTimer = setTimeout(function finish_gif_animation() {
-        showRolledPieceImage(move_type);
+    dice_animation_timer = setTimeout(function finish_gif_animation() {
+        show_rolled_piece_image(move_type);
     }, ROLLING_ANIMATION_TIME);
-}
-function showRolledPieceImage(move_type) {
-    if (pendingRolledMoveType === null || move_type === null) {
+};
+show_rolled_piece_image = function show_rolled_piece_image(move_type) {
+    if (pending_rolled_move_type === null || move_type === null) {
         return;
     }
 
-    const image_path = rollResultImageByMoveType[move_type];
+    const image_path = roll_result_image_by_move_type[move_type];
 
     clear_dice_animation_timer();
     dice_roll_image.classList.add("is-hidden");
@@ -524,32 +572,29 @@ function showRolledPieceImage(move_type) {
     dice_result_image.classList.remove("is-hidden");
     dice_live_element.textContent = "The Thief rolled " + move_type + ".";
     clear_dice_result_timer();
-    diceResultTimer = setTimeout(function finish_after_delay() {
-        finishDiceRoll(move_type);
+    dice_result_timer = setTimeout(function finish_after_delay() {
+        finish_dice_roll(move_type);
     }, RESULT_DISPLAY_TIME);
-}
-function finishDiceRoll(move_type) {
+};
+finish_dice_roll = function finish_dice_roll(move_type) {
     const next_game = set_thief_move(game, move_type);
 
     if (next_game !== null) {
         game = next_game;
     }
 
-    isDiceAnimationPlaying = false;
-    pendingRolledMoveType = null;
+    is_dice_animation_playing = false;
+    pending_rolled_move_type = null;
     clear_dice_result_timer();
     hide_dice_stage();
     message_element.textContent = "Choose a glowing square.";
     render();
     focus_cursor_square();
-}
-function getRandomMoveType() {
-    return roll_thief_die();
-}
-function clamp(value, minimum, maximum) {
+};
+clamp = function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(value, maximum));
-}
-function focus_cursor_square() {
+};
+focus_cursor_square = function focus_cursor_square() {
     const row_selector = "[data-row='" + String(cursor.row) + "']";
     const column_selector = "[data-column='" + String(cursor.column) + "']";
     const selector = row_selector + column_selector;
@@ -560,8 +605,8 @@ function focus_cursor_square() {
     if (square !== null) {
         square.focus();
     }
-}
-function invalid_message(row, column) {
+};
+invalid_message = function invalid_message(row, column) {
     if (game.current_player === PLAYER_THIEF) {
         if (
             row === game.king.row
@@ -580,15 +625,15 @@ function invalid_message(row, column) {
     return (
         "The King can only move one square and cannot move through police cars."
     );
-}
-function next_cursor() {
+};
+next_cursor = function next_cursor() {
     if (game.current_player === PLAYER_THIEF) {
         return {row: game.thief.row, column: game.thief.column};
     }
 
     return {row: game.king.row, column: game.king.column};
-}
-function legal_action_for_square(row, column) {
+};
+legal_action_for_square = function legal_action_for_square(row, column) {
     const position = {row, column};
 
     if (game.winner !== null) {
@@ -620,8 +665,8 @@ function legal_action_for_square(row, column) {
     }
 
     return null;
-}
-function legal_label(legal_action) {
+};
+legal_label = function legal_label(legal_action) {
     if (legal_action === "move") {
         return ". Legal move";
     }
@@ -631,11 +676,8 @@ function legal_label(legal_action) {
     }
 
     return "";
-}
-function square_display_label(label) {
-    return label;
-}
-function square_class(row, column, label, legal_action) {
+};
+square_class = function square_class(row, column, label, legal_action) {
     const classes = [
         "square",
         (
@@ -664,11 +706,11 @@ function square_class(row, column, label, legal_action) {
     }
 
     return classes.join(" ");
-}
-function square_is_cursor(row, column) {
+};
+square_is_cursor = function square_is_cursor(row, column) {
     return cursor.row === row && cursor.column === column;
-}
-function add_square_content(square, label) {
+};
+add_square_content = function add_square_content(square, label) {
     const image_path = square_image(label);
 
     square.textContent = "";
@@ -684,14 +726,14 @@ function add_square_content(square, label) {
     } else {
         square.textContent = square_text(label);
     }
-}
-function square_image(label) {
+};
+square_image = function square_image(label) {
     if (label === "Thief" || label === "Thief at the Exit") {
         if (game.current_player === PLAYER_KING || game.thief_move === null) {
             return THIEF_SACK_IMAGE;
         }
 
-        return thiefImageByMoveType[game.thief_move] || THIEF_SACK_IMAGE;
+        return thief_image_by_move_type[game.thief_move] || THIEF_SACK_IMAGE;
     }
 
     if (label === "King" || label === "King caught the Thief") {
@@ -707,8 +749,8 @@ function square_image(label) {
     }
 
     return null;
-}
-function square_text(label) {
+};
+square_text = function square_text(label) {
     if (label === "Thief") {
         return "T";
     }
@@ -738,8 +780,8 @@ function square_text(label) {
     }
 
     return "";
-}
-function success_message() {
+};
+success_message = function success_message() {
     if (game.winner === PLAYER_THIEF) {
         return "The Thief reached the exit.";
     }
@@ -753,54 +795,54 @@ function success_message() {
     }
 
     return "The Thief moved. The King may move or place a police car.";
-}
-function clear_dice_result_timer() {
-    if (diceResultTimer !== null) {
-        clearTimeout(diceResultTimer);
-        diceResultTimer = null;
+};
+clear_dice_result_timer = function clear_dice_result_timer() {
+    if (dice_result_timer !== null) {
+        clearTimeout(dice_result_timer);
+        dice_result_timer = null;
     }
-}
-function clear_dice_animation_timer() {
-    if (diceAnimationTimer !== null) {
-        clearTimeout(diceAnimationTimer);
-        diceAnimationTimer = null;
+};
+clear_dice_animation_timer = function clear_dice_animation_timer() {
+    if (dice_animation_timer !== null) {
+        clearTimeout(dice_animation_timer);
+        dice_animation_timer = null;
     }
-}
-function hide_dice_stage() {
+};
+hide_dice_stage = function hide_dice_stage() {
     dice_stage.classList.add("is-hidden");
     clear_dice_animation_timer();
     dice_roll_image.classList.add("is-hidden");
     hide_rolled_piece_image();
-}
-function hide_rolled_piece_image() {
+};
+hide_rolled_piece_image = function hide_rolled_piece_image() {
     dice_result_image.classList.add("is-hidden");
     dice_result_image.removeAttribute("src");
-}
-function screen_reader_dice_text() {
+};
+screen_reader_dice_text = function screen_reader_dice_text() {
     if (game.thief_move === null) {
         return "The Thief needs to roll the movement dice.";
     }
 
     return "The Thief rolled " + game.thief_move + ".";
-}
-function choose_king_move() {
+};
+choose_king_move = function choose_king_move() {
     king_action = "move";
     message_element.textContent = "King action: move one square.";
     render();
     focus_cursor_square();
-}
-function choose_barrier() {
+};
+choose_barrier = function choose_barrier() {
     king_action = "barrier";
     message_element.textContent = (
         "King action: choose an empty square for a police car."
     );
     render();
     focus_cursor_square();
-}
-function prefers_reduced_motion() {
+};
+prefers_reduced_motion = function prefers_reduced_motion() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-function animate_piece_glide(glide) {
+};
+animate_piece_glide = function animate_piece_glide(glide) {
     if (prefers_reduced_motion()) {
         return;
     }
@@ -851,17 +893,16 @@ function animate_piece_glide(glide) {
             piece.style.transform = "translate(0, 0)";
         });
     });
-}
-function maybe_celebrate() {
+};
+maybe_celebrate = function maybe_celebrate() {
     if (game.winner !== null && !celebration_shown) {
         celebration_shown = true;
         audio_controller.stop_music();
         win_poster_controller.trigger_win_poster(game.winner);
-        audio_controller.sound_poster_thump();
         audio_controller.sound_victor(game.winner);
     }
-}
-function turn_decision_key() {
+};
+turn_decision_key = function turn_decision_key() {
     if (game.winner !== null) {
         return "ended";
     }
@@ -871,8 +912,8 @@ function turn_decision_key() {
     }
 
     return "king";
-}
-function render_timer() {
+};
+render_timer = function render_timer() {
     timer_element.textContent = "";
     timer_element.classList.remove("is-low");
 
@@ -903,8 +944,8 @@ function render_timer() {
 
     timer_element.append(label, time);
     timer_element.classList.toggle("is-low", turn_seconds_left <= 5);
-}
-function sync_turn_timer() {
+};
+sync_turn_timer = function sync_turn_timer() {
     const key = turn_decision_key();
 
     if (key !== last_turn_key) {
@@ -913,12 +954,12 @@ function sync_turn_timer() {
     }
 
     render_timer();
-}
-function handle_turn_tick() {
+};
+handle_turn_tick = function handle_turn_tick() {
     if (
         game.winner !== null
         || intro_controller.is_open()
-        || isDiceAnimationPlaying
+        || is_dice_animation_playing
     ) {
         render_timer();
         return;
@@ -937,46 +978,41 @@ function handle_turn_tick() {
     }
 
     render_timer();
-}
-function handle_turn_timeout() {
-    const message = timeout_message();
-    const next_game = pass_turn(game);
-
-    if (next_game !== null) {
-        game = next_game;
-        king_action = "move";
-        cursor = next_cursor();
-        message_element.textContent = message;
-        dice_live_element.textContent = message;
-    }
-
-    render();
-    focus_cursor_square();
-}
-function timeout_message() {
+};
+handle_turn_timeout = function handle_turn_timeout() {
+    apply_pass(timeout_message());
+};
+timeout_message = function timeout_message() {
     if (game.current_player === PLAYER_THIEF) {
         return "The Thief ran out of time. The Thief's turn was skipped.";
     }
 
     return "The King ran out of time. The King's turn was skipped.";
-}
-function skip_message() {
+};
+skip_message = function skip_message() {
     if (game.current_player === PLAYER_THIEF) {
         return "The Thief skipped their turn.";
     }
 
     return "The King skipped their turn.";
-}
-function start_turn_timer() {
+};
+start_turn_timer = function start_turn_timer() {
     if (turn_timer_id !== null) {
         clearInterval(turn_timer_id);
     }
 
     turn_timer_id = setInterval(handle_turn_tick, 1000);
-}
-function start_audio() {
+};
+start_audio = function start_audio() {
     audio_controller.start_audio(game.winner === null);
-}
+};
+
+dice_button.setAttribute("aria-keyshortcuts", "R");
+move_button.setAttribute("aria-keyshortcuts", "K");
+barrier_button.setAttribute("aria-keyshortcuts", "P");
+skip_turn_button.setAttribute("aria-keyshortcuts", "L");
+restart_button.setAttribute("aria-keyshortcuts", "N");
+how_to_play_button.setAttribute("aria-keyshortcuts", "H");
 
 board_element.addEventListener("keydown", handle_keydown);
 document.addEventListener("keydown", handle_global_shortcuts);
@@ -991,9 +1027,8 @@ intro_skip.addEventListener("click", intro_controller.close_intro);
 intro_overlay.addEventListener("keydown", intro_controller.handle_intro_keydown);
 document.addEventListener("pointerdown", start_audio);
 document.addEventListener("keydown", start_audio);
-bg_music.volume = 0.08;
 
-createDiceButton();
+create_dice_button();
 render();
 intro_controller.show_intro();
 start_turn_timer();

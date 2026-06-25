@@ -11,8 +11,13 @@
  *
  * Public functions never mutate the game object they receive. A successful
  * action returns a new game state; an illegal action returns null. That means
- * callers should always replace their saved game state only after checking
- * that the return value is not null.
+ * callers can treat null as a rejected action and keep their previous state.
+ *
+ * A normal turn sequence is: create a game, roll the Thief's movement die,
+ * store that die result, move or skip the Thief, then let the King move,
+ * place a police car, or skip. The King wins by catching the Thief or by
+ * delaying the escape past the turn limit. The Thief wins by reaching the
+ * Exit square.
  *
  * @namespace ChessThieves
  */
@@ -27,12 +32,49 @@ const ChessThieves = Object.create(null);
  */
 
 /**
+ * Player identifier used for turns and winners.
+ *
+ * `PLAYER_THIEF` means the Thief is active or has escaped. `PLAYER_KING`
+ * means the King is active or has caught/delayed the Thief.
+ * @typedef {("thief" | "king")} ChessThieves.Player
+ */
+
+/**
+ * Movement die face for the Thief's current turn.
+ *
+ * Pawn is a one-square orthogonal step, knight is an L-shaped jump, bishop is
+ * a diagonal slide of up to four squares, rook is a straight slide of up to
+ * four squares, and queen is either a bishop or rook slide.
+ * Values are "pawn", "knight", "bishop", "rook", or "queen".
+ * @typedef {string} ChessThieves.MoveType
+ */
+
+/**
+ * Marker stored in each board cell.
+ *
+ * `EMPTY` is an open square. `THIEF`, `KING`, and `EXIT` show the main game
+ * pieces and target. `BARRIER` marks permanent setup traffic barriers, while
+ * `POLICE_CAR` marks the blockers placed by the King during play.
+ * Values are "empty", "thief", "king", "exit", "barrier", or "police_car".
+ * @typedef {string} ChessThieves.SquareMarker
+ */
+
+/**
+ * Human-readable label for a board square.
+ *
+ * These labels are intended for interfaces, screen-reader text, and debugging
+ * output. They include normal square contents plus the special win-state
+ * labels "Thief at the Exit" and "King caught the Thief".
+ * @typedef {string} ChessThieves.SquareLabel
+ */
+
+/**
  * The board array used by the rule engine.
  *
  * The first index is the row and the second index is the column, so
  * `board[2][5]` means row 2, column 5. Each cell contains one exported square
  * marker: `EMPTY`, `THIEF`, `KING`, `EXIT`, `BARRIER`, or `POLICE_CAR`.
- * @typedef {string[][]} ChessThieves.Board
+ * @typedef {ChessThieves.SquareMarker[][]} ChessThieves.Board
  */
 
 /**
@@ -41,7 +83,7 @@ const ChessThieves = Object.create(null);
  * Store the object returned by `create_new_game`, then pass the latest state
  * into actions such as `set_thief_move`, `move_thief`, `move_king`, and
  * `place_barrier`. The returned state includes an updated `board` and `winner`
- * field, so UI code can render directly from it after every accepted action.
+ * field after every accepted action.
  * @typedef {object} ChessThieves.GameState
  * @property {ChessThieves.Position} thief Current Thief square.
  * @property {ChessThieves.Position} king Current King square.
@@ -49,38 +91,91 @@ const ChessThieves = Object.create(null);
  * @property {ChessThieves.Position[]} map_barriers Permanent traffic barriers
  * randomly placed at setup.
  * @property {ChessThieves.Position[]} barriers Police cars placed by the King.
- * @property {string} current_player Either `PLAYER_THIEF` or `PLAYER_KING`.
- * @property {string|null} thief_move The Thief's current die result, or null
- * before the Thief has rolled this turn.
+ * @property {ChessThieves.Player} current_player The side that must act next.
+ * @property {ChessThieves.MoveType|null} thief_move The Thief's current die
+ * result, or null before the Thief has rolled this turn.
  * @property {number} turn_count Current round number. It starts at 1 and
  * increases after the King acts or skips.
- * @property {string|null} winner `PLAYER_THIEF`, `PLAYER_KING`, or null while
- * the match is still running.
+ * @property {ChessThieves.Player|null} winner The winner, or null while the
+ * match is still running.
  * @property {ChessThieves.Board} board Board markers rebuilt from the current
  * positions, permanent barriers, and placed police cars.
  */
 
+/**
+ * Number of rows and columns on a Chess Thieves board.
+ * @memberof ChessThieves
+ * @constant {number}
+ */
 const BOARD_SIZE = 8;
+
+/**
+ * Highest round number the Thief can use before the King wins by delay.
+ * @memberof ChessThieves
+ * @constant {number}
+ */
 const MAX_TURNS = 15;
-const MAX_BARRIERS = 6;
+
+/**
+ * Maximum number of police cars the King may place during a match.
+ * @memberof ChessThieves
+ * @constant {number}
+ */
+const MAX_BARRIERS = 5;
+
+/**
+ * Marker for a square with no piece, Exit, traffic barrier, or police car.
+ * @memberof ChessThieves
+ * @constant {ChessThieves.SquareMarker}
+ */
 const EMPTY = "empty";
+
+/**
+ * Marker for the Thief's current square.
+ * @memberof ChessThieves
+ * @constant {ChessThieves.SquareMarker}
+ */
 const THIEF = "thief";
+
+/**
+ * Marker for the King's current square.
+ * @memberof ChessThieves
+ * @constant {ChessThieves.SquareMarker}
+ */
 const KING = "king";
+
+/**
+ * Marker for the square the Thief must reach to win.
+ * @memberof ChessThieves
+ * @constant {ChessThieves.SquareMarker}
+ */
 const EXIT = "exit";
+
+/**
+ * Marker for a permanent traffic barrier placed during game setup.
+ * @memberof ChessThieves
+ * @constant {ChessThieves.SquareMarker}
+ */
 const BARRIER = "barrier";
+
+/**
+ * Marker for a police car placed by the King during play.
+ * @memberof ChessThieves
+ * @constant {ChessThieves.SquareMarker}
+ */
 const POLICE_CAR = "police_car";
 
 /**
  * Turn and winner value used when the Thief is active or has escaped.
  * @memberof ChessThieves
- * @constant {string}
+ * @constant {ChessThieves.Player}
  */
 const PLAYER_THIEF = "thief";
 
 /**
  * Turn and winner value used when the King is active or has won.
  * @memberof ChessThieves
- * @constant {string}
+ * @constant {ChessThieves.Player}
  */
 const PLAYER_KING = "king";
 
@@ -91,7 +186,7 @@ const PLAYER_KING = "king";
  * queen each appear once. The strings in this array are the same values that
  * `roll_thief_die` returns and `set_thief_move` accepts.
  * @memberof ChessThieves
- * @constant {string[]}
+ * @constant {ChessThieves.MoveType[]}
  */
 const thief_move_die = Object.freeze([
     "pawn",
@@ -136,9 +231,8 @@ const copy_position = function copy_position(position) {
 /**
  * Checks whether a coordinate can exist on a Chess Thieves board.
  *
- * Use this before reading `game.board[row][column]` in custom UI code. A valid
- * coordinate must use whole-number indexes from 0 to 7. Fractional, negative,
- * and edge-overflow coordinates are rejected.
+ * A valid coordinate must use whole-number indexes from 0 to 7. Fractional,
+ * negative, and edge-overflow coordinates are outside the playable board.
  *
  * @param {number} row The row to check (0 = top, 7 = bottom).
  * @param {number} column The column to check (0 = left, 7 = right).
@@ -160,15 +254,19 @@ const is_inside_board = function is_inside_board(row, column) {
 /**
  * Creates an empty 8 by 8 board using the Chess Thieves board format.
  *
- * This helper is useful when testing individual movement rules without a full
- * game state. It does not place the Thief, King, Exit, traffic barriers, or
- * police cars. To start a playable match, use `create_new_game` instead.
+ * The board contains only `EMPTY` markers. It does not place the Thief, King,
+ * Exit, traffic barriers, or police cars; those appear in full states created
+ * by `create_new_game`.
  *
  * @returns {ChessThieves.Board} A board where every cell is `EMPTY`.
  * @example
- * const board = create_empty_board();
- * board[4][5] = BARRIER;
- * is_valid_rook_move(board, {row: 4, column: 4}, {row: 4, column: 7});
+ * const board = ChessThieves.create_empty_board();
+ * board[4][5] = ChessThieves.BARRIER;
+ * ChessThieves.is_valid_rook_move(
+ *     board,
+ *     {row: 4, column: 4},
+ *     {row: 4, column: 7}
+ * );
  * @memberof ChessThieves
  * @function
  */
@@ -388,7 +486,11 @@ const board_from_state = function board_from_state(game) {
     return board;
 };
 
-const is_exit_reachable = function is_exit_reachable(board, start, exit_position) {
+const is_exit_reachable = function is_exit_reachable(
+    board,
+    start,
+    exit_position
+) {
     const queue = [copy_position(start)];
     const visited = create_empty_board();
 
@@ -486,13 +588,12 @@ const is_empty_for_barrier = function is_empty_for_barrier(game, position) {
 /**
  * Checks whether a proposed Thief destination matches the rolled die face.
  *
- * Use this in a UI to highlight legal squares after `set_thief_move` has
- * stored the current roll. It delegates to the pawn, knight, bishop, rook, or
- * queen validator and also applies the Chess Thieves capture rule: the Thief
- * cannot move onto the King's square.
+ * The move type must be the Thief's die result for the turn. This function
+ * delegates to the pawn, knight, bishop, rook, or queen rule and also applies
+ * the Chess Thieves capture rule: the Thief cannot move onto the King's square.
  *
- * @param {ChessThieves.GameState} game The current game state.
- * @param {string} move_type The die result to apply.
+ * @param {ChessThieves.GameState} game A Chess Thieves state to validate.
+ * @param {ChessThieves.MoveType} move_type The die result to apply.
  * @param {ChessThieves.Position} start The Thief's current square.
  * @param {ChessThieves.Position} end The square the Thief wants to move to.
  * @returns {boolean} True when the destination is legal for that die result.
@@ -535,12 +636,11 @@ const is_valid_thief_move = function is_valid_thief_move(
 /**
  * Checks whether a square is a legal King move destination.
  *
- * Use this to highlight possible King moves before calling `move_king`. The
- * King must move exactly one square in any direction. The King can enter the
- * Thief's square to win, but cannot enter the Exit square, traffic barriers,
- * police cars, or any square outside the board.
+ * The King must move exactly one square in any direction. The King can enter
+ * the Thief's square to win, but cannot enter the Exit square, traffic
+ * barriers, police cars, or any square outside the board.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A Chess Thieves state to validate.
  * @param {ChessThieves.Position} end The square the King wants to move to.
  * @returns {boolean} True when `move_king` would accept this destination.
  * @memberof ChessThieves
@@ -568,9 +668,9 @@ const is_valid_king_move = function is_valid_king_move(game, end) {
  * happened and `turn_count` is greater than `MAX_TURNS`, the King wins because
  * the Thief failed to escape in time.
  *
- * @param {ChessThieves.GameState} game The current game state.
- * @returns {string|null} `PLAYER_THIEF`, `PLAYER_KING`, or null when nobody
- * has won yet.
+ * @param {ChessThieves.GameState} game A Chess Thieves state to inspect.
+ * @returns {ChessThieves.Player|null} `PLAYER_THIEF`, `PLAYER_KING`, or null
+ * when nobody has won yet.
  * @memberof ChessThieves
  * @function
  */
@@ -612,12 +712,11 @@ const is_reachable_with_barrier = function is_reachable_with_barrier(
 /**
  * Checks whether a square can receive a King-placed police car.
  *
- * Use this to highlight legal police-car placement squares before calling
- * `place_barrier`. A valid placement must be on the board, empty, within the
- * six-car limit, and must leave at least one open path from the Thief to the
- * Exit after the police car is added.
+ * A valid placement must be on the board, empty, within `MAX_BARRIERS`, and
+ * must leave at least one open path from the Thief to the Exit after the police
+ * car is added.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A Chess Thieves state to validate.
  * @param {ChessThieves.Position} position The square where the King wants to
  * place a police car.
  * @returns {boolean} True when `place_barrier` would accept this square.
@@ -648,11 +747,11 @@ const is_valid_barrier_placement = function is_valid_barrier_placement(
 /**
  * Checks whether the match is over.
  *
- * This is a convenience wrapper around `check_winner`. Use it to disable UI
- * controls, stop timers, or prevent extra moves after either the Thief or King
- * has won.
+ * This is a convenience wrapper around `check_winner`. A match is ended as
+ * soon as the Thief has escaped, the King has caught the Thief, or the King
+ * has won by the turn limit.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A Chess Thieves state to inspect.
  * @returns {boolean} True when `check_winner(game)` is not null.
  * @memberof ChessThieves
  * @function
@@ -745,10 +844,10 @@ const create_random_setup = function create_random_setup(random_function) {
  * @param {Function} [random_function=Math.random] Optional random number
  * source that returns a value from 0 up to, but not including, 1. Supplying a
  * fixed function makes tests deterministic.
- * @returns {string} One of "pawn", "knight", "bishop", "rook", or "queen".
+ * @returns {ChessThieves.MoveType} The move type to store for this Thief turn.
  * @example
- * const move_type = roll_thief_die();
- * game = set_thief_move(game, move_type);
+ * const move_type = ChessThieves.roll_thief_die();
+ * game = ChessThieves.set_thief_move(game, move_type);
  * @memberof ChessThieves
  * @function
  */
@@ -760,15 +859,16 @@ const roll_thief_die = function roll_thief_die(random_function = Math.random) {
 /**
  * Returns the display label for one board square.
  *
- * Use this in a UI to decide what to draw or announce for a square. It combines
- * the derived board markers with special end-game cases, so a square can label
- * the capture as "King caught the Thief" or the escape as "Thief at the Exit".
+ * The label combines board markers with special end-game cases. If the Thief
+ * is on the Exit, the square is labelled "Thief at the Exit"; if the King is
+ * on the Thief, the square is labelled "King caught the Thief".
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A Chess Thieves state to inspect.
  * @param {number} row The row of the square to describe.
  * @param {number} column The column of the square to describe.
- * @returns {string} One of "Thief", "King", "Exit", "Barrier", "Police Car",
- * "Empty", "Thief at the Exit", or "King caught the Thief".
+ * @returns {ChessThieves.SquareLabel} One of "Thief", "King", "Exit",
+ * "Barrier", "Police Car", "Empty", "Thief at the Exit", or
+ * "King caught the Thief".
  * @memberof ChessThieves
  * @function
  */
@@ -812,24 +912,22 @@ const get_square_label = function get_square_label(game, row, column) {
 /**
  * Applies the Thief's chosen destination after a die roll has been set.
  *
- * Call this only after `set_thief_move` has accepted the Thief's current die
- * result. The destination must match `game.thief_move`, must be reachable under
- * that move type's rules, and must not be occupied by the King. When the move
- * succeeds, control passes to the King unless the Thief reaches the Exit, in
- * which case `winner` becomes `PLAYER_THIEF`.
+ * The state must already contain an accepted die result in `game.thief_move`.
+ * The destination must match that move type's rules and must not be occupied
+ * by the King. A successful non-winning move passes control to the King; a
+ * move onto the Exit sets `winner` to `PLAYER_THIEF`.
  *
- * The input state is not changed. Save the returned object as the new game
- * state. A null return means the UI should leave the old state in place and
- * ask the player to choose again.
+ * The input state is not changed. A legal move returns the next state. An
+ * illegal move returns null.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A state where the Thief is active.
  * @param {number} row The row the Thief wants to move to.
  * @param {number} column The column the Thief wants to move to.
  * @returns {ChessThieves.GameState|null} The updated game state, or null if
  * the move is not allowed.
  * @example
- * let next_game = set_thief_move(game, "rook");
- * next_game = move_thief(next_game, 6, 0);
+ * let next_game = ChessThieves.set_thief_move(game, "rook");
+ * next_game = ChessThieves.move_thief(next_game, 6, 0);
  * if (next_game !== null) {
  *     game = next_game;
  * }
@@ -862,13 +960,17 @@ const move_thief = function move_thief(game, row, column) {
  * `turn_count` increases by one, `thief_move` resets to null, and the Thief
  * becomes the current player.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A state where the King is active.
  * @param {number} row The row the King wants to move to.
  * @param {number} column The column the King wants to move to.
  * @returns {ChessThieves.GameState|null} The updated game state, or null if
  * the move is not allowed.
  * @example
- * const next_game = move_king(game, game.king.row + 1, game.king.column);
+ * const next_game = ChessThieves.move_king(
+ *     game,
+ *     game.king.row + 1,
+ *     game.king.column
+ * );
  * if (next_game !== null) {
  *     game = next_game;
  * }
@@ -903,15 +1005,15 @@ const move_king = function move_king(game, row, column) {
  * `turn_count` increases, `thief_move` resets to null, and the Thief takes the
  * next turn.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A state where the King is active.
  * @param {number} row The row where the police car should be placed.
  * @param {number} column The column where the police car should be placed.
  * @returns {ChessThieves.GameState|null} The updated game state, or null if
  * placement is not allowed.
  * @example
- * const next_game = place_barrier(game, 3, 4);
+ * const next_game = ChessThieves.place_barrier(game, 3, 4);
  * if (next_game === null) {
- *     // Keep the old game state and show an invalid-placement message.
+ *     // The attempted police-car placement was illegal.
  * }
  * @memberof ChessThieves
  * @function
@@ -945,19 +1047,18 @@ const place_barrier = function place_barrier(game, row, column) {
 /**
  * Stores the Thief's die result for the current turn.
  *
- * Chess Thieves separates rolling from moving. Use `roll_thief_die` to choose
- * a move type, then call this function to record it on the game state. After a
- * roll is stored, the Thief must either move with that move type or skip; a
- * second roll in the same Thief turn is rejected.
+ * Chess Thieves separates rolling from moving. This function records the die
+ * face that controls the Thief's move for the current turn. After a roll is
+ * stored, the Thief must either move with that move type or skip; a second
+ * roll in the same Thief turn is rejected.
  *
- * @param {ChessThieves.GameState} game The current game state.
- * @param {string} move_type The die result for this turn. It must be one of
- * the strings in `thief_move_die`.
+ * @param {ChessThieves.GameState} game A state where the Thief is active.
+ * @param {ChessThieves.MoveType} move_type The die result for this turn.
  * @returns {ChessThieves.GameState|null} The updated game state, or null if
  * the roll is not accepted.
  * @example
- * const move_type = roll_thief_die();
- * const next_game = set_thief_move(game, move_type);
+ * const move_type = ChessThieves.roll_thief_die();
+ * const next_game = ChessThieves.set_thief_move(game, move_type);
  * @memberof ChessThieves
  * @function
  */
@@ -985,7 +1086,7 @@ const set_thief_move = function set_thief_move(game, move_type) {
  * is the same transition used after a legal King action, so it can trigger the
  * King's turn-limit win once the counter goes beyond `MAX_TURNS`.
  *
- * @param {ChessThieves.GameState} game The current game state.
+ * @param {ChessThieves.GameState} game A state for the active side to skip.
  * @returns {ChessThieves.GameState|null} The updated game state, or null when
  * the game already has a winner.
  * @memberof ChessThieves
@@ -1019,13 +1120,15 @@ const pass_turn = function pass_turn(game) {
  * @returns {ChessThieves.GameState} A complete game state ready for the Thief
  * to roll the movement die.
  * @example
- * let game = create_new_game();
- * const roll = roll_thief_die();
- * game = set_thief_move(game, roll);
+ * let game = ChessThieves.create_new_game();
+ * const roll = ChessThieves.roll_thief_die();
+ * game = ChessThieves.set_thief_move(game, roll);
  * @memberof ChessThieves
  * @function
  */
-const create_new_game = function create_new_game(random_function = Math.random) {
+const create_new_game = function create_new_game(
+    random_function = Math.random
+) {
     const setup = create_random_setup(random_function);
 
     return finish_game_state({

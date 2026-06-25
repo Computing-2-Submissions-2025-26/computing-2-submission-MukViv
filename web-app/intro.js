@@ -42,11 +42,16 @@ function createIntroController(config) {
         );
         build_intro_dots();
         current.classList.remove("intro-step-enter");
-        requestAnimationFrame(function reflow_step() {
-            requestAnimationFrame(function add_enter() {
+        window.requestAnimationFrame(function reflow_step() {
+            window.requestAnimationFrame(function add_enter() {
                 current.classList.add("intro-step-enter");
             });
         });
+    }
+
+    function close_intro() {
+        elements.overlay.classList.add("is-hidden");
+        config.on_close();
     }
 
     function go_intro_next() {
@@ -72,11 +77,6 @@ function createIntroController(config) {
         elements.overlay.classList.remove("is-hidden");
         config.on_visibility_change();
         elements.next.focus();
-    }
-
-    function close_intro() {
-        elements.overlay.classList.add("is-hidden");
-        config.on_close();
     }
 
     function handle_intro_keydown(event) {

@@ -1,8 +1,21 @@
-/*jslint browser, module*/
-function createAudioController(config) {
+/*jslint browser*/
+
+// Audio controller for Chess Thieves. Plays imported mp3 effects and the
+// background music track, plus two synthesized sounds (the dice roll and the
+// countdown tick) generated with the Web Audio API.
+
+const MUSIC_VOLUME = 0.08;
+
+const createAudioController = function createAudioController(config) {
     let audio_context = null;
     let music_enabled = false;
-    function ensure_audio() {
+
+    config.bg_music.volume = MUSIC_VOLUME;
+
+    // Creates the AudioContext on first use and resumes it if the browser
+    // suspended it before the first user gesture. Returns null when the
+    // browser has no Web Audio support.
+    const ensure_audio = function ensure_audio() {
         if (audio_context === null) {
             const Ctx = window.AudioContext || window.webkitAudioContext;
 
@@ -10,35 +23,34 @@ function createAudioController(config) {
                 return null;
             }
 
-            try {
-                audio_context = new Ctx();
-            } catch (error) {
-                void error;
-                audio_context = null;
-                return null;
-            }
+            audio_context = new Ctx();
         }
 
-        if (audio_context !== null && audio_context.state === "suspended") {
+        if (audio_context.state === "suspended") {
             audio_context.resume();
         }
 
         return audio_context;
-    }
-    function play_file_sound(source, volume) {
-        const sfx = new Audio(source);
+    };
+
+    // Plays a one-shot mp3 file. Browsers reject playback that happens before
+    // a user gesture, so a rejected promise is ignored rather than thrown.
+    const play_file_sound = function play_file_sound(source, volume) {
+        const sfx = new window.Audio(source);
 
         sfx.volume = volume;
 
         const played = sfx.play();
 
-        if (played !== undefined && typeof played.catch === "function") {
+        if (played !== undefined) {
             played.catch(function ignore_blocked_sound() {
                 return undefined;
             });
         }
-    }
-    function play_tone(freq, duration, type, gain, delay) {
+    };
+
+    // Plays a single shaped oscillator note. Used for the dice roll and tick.
+    const play_tone = function play_tone(freq, duration, type, gain, delay) {
         const ctx = ensure_audio();
 
         if (ctx === null) {
@@ -58,21 +70,24 @@ function createAudioController(config) {
         env.connect(ctx.destination);
         osc.start(start);
         osc.stop(start + duration + 0.03);
-    }
-    function make_shaper_curve(amount) {
+    };
+
+    const make_shaper_curve = function make_shaper_curve(amount) {
         const size = 1024;
         const curve = new Float32Array(size);
         let i = 0;
 
         while (i < size) {
             const x = (i / (size - 1)) * 2 - 1;
+
             curve[i] = Math.tanh(x * amount);
             i += 1;
         }
 
         return curve;
-    }
-    function wood_knock(start, gain, base, out) {
+    };
+
+    const wood_knock = function wood_knock(start, gain, base, out) {
         const ctx = audio_context;
         const length = Math.floor(ctx.sampleRate * 0.005);
         const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
@@ -112,14 +127,17 @@ function createAudioController(config) {
             src.stop(start + 0.1);
             k += 1;
         }
-    }
-    function sound_move() {
+    };
+
+    const sound_move = function sound_move() {
         play_file_sound(config.move_src, 0.6);
-    }
-    function sound_barrier() {
+    };
+
+    const sound_barrier = function sound_barrier() {
         play_file_sound(config.barrier_src, 0.6);
-    }
-    function sound_victor(winner) {
+    };
+
+    const sound_victor = function sound_victor(winner) {
         play_file_sound(
             (
                 winner === config.player_thief
@@ -128,20 +146,25 @@ function createAudioController(config) {
             ),
             0.75
         );
-    }
-    function sound_dice() {
+    };
+
+    const sound_dice = function sound_dice() {
         const ctx = ensure_audio();
+        const knocks = 6;
+        let i = 0;
+        let t;
+        let out;
+        let low;
+        let limiter;
 
         if (ctx === null) {
             return;
         }
 
-        const out = ctx.createGain();
-        const low = ctx.createBiquadFilter();
-        const limiter = ctx.createWaveShaper();
-        const knocks = 6;
-        let t = ctx.currentTime + 1;
-        let i = 0;
+        out = ctx.createGain();
+        low = ctx.createBiquadFilter();
+        limiter = ctx.createWaveShaper();
+        t = ctx.currentTime + 1;
 
         out.gain.value = 2.2;
         low.type = "lowpass";
@@ -164,28 +187,9 @@ function createAudioController(config) {
             t += 0.1 * (0.5 + Math.random()) * (1 + frac);
             i += 1;
         }
-    }
-    function sound_poster_thump() {
-        const ctx = ensure_audio();
+    };
 
-        if (ctx === null) {
-            return;
-        }
-
-        const start = ctx.currentTime + 0.1;
-        const out = ctx.createGain();
-        const low = ctx.createBiquadFilter();
-
-        out.gain.value = 2.8;
-        low.type = "lowpass";
-        low.frequency.value = 900;
-        out.connect(low);
-        low.connect(ctx.destination);
-
-        wood_knock(start, 1.15, 95, out);
-        play_tone(72, 0.18, "sine", 0.28, 0.1);
-    }
-    function sound_tick(urgent) {
+    const sound_tick = function sound_tick(urgent) {
         play_tone(
             (
                 urgent
@@ -197,13 +201,10 @@ function createAudioController(config) {
             0.22,
             0
         );
-    }
-    function start_music() {
-        if (config.music_src === "") {
-            return;
-        }
+    };
 
-        if (music_enabled) {
+    const start_music = function start_music() {
+        if (config.music_src === "" || music_enabled) {
             return;
         }
 
@@ -215,36 +216,37 @@ function createAudioController(config) {
 
         music_enabled = true;
 
-        if (played !== undefined && typeof played.catch === "function") {
+        if (played !== undefined) {
             played.catch(function music_unavailable() {
                 music_enabled = false;
             });
         }
-    }
-    function stop_music() {
+    };
+
+    const stop_music = function stop_music() {
         config.bg_music.pause();
         config.bg_music.currentTime = 0;
         music_enabled = false;
-    }
-    function start_audio(should_start_music) {
+    };
+
+    const start_audio = function start_audio(should_start_music) {
         ensure_audio();
 
         if (should_start_music) {
             start_music();
         }
-    }
+    };
 
     return Object.freeze({
         sound_barrier,
         sound_dice,
         sound_move,
-        sound_poster_thump,
         sound_tick,
         sound_victor,
         start_audio,
         start_music,
         stop_music
     });
-}
+};
 
 export {createAudioController};

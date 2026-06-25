@@ -39,7 +39,7 @@
     --font-size-title: 38px;
     --font-size-clock: clamp(40px, 6vmin, 60px);
 
-    --font-body: Georgia, serif;
+    --font-body: rockwell, baskerville, serif;
 
     --line-height-readable: 1.45;
     --border-width-thin: 1px;
@@ -815,7 +815,7 @@ button:not(:disabled):active {
 .intro-step {
     align-items: center;
     display: flex;
-    gap: var(--spacing-large);
+    gap: var(--spacing-x-large);
     justify-content: center;
     min-height: 220px;
     padding-top: calc(var(--spacing-x-large) * 2);
