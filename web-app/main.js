@@ -2,7 +2,8 @@
 // Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 import ChessThieves from "./game-logic.js";
-const { //removes need for ChessThieves. all the time
+// Short aliases for the game module API.
+const {
     BOARD_SIZE,
     MAX_POLICE_CARS,
     MAX_TURNS,

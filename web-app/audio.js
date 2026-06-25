@@ -238,7 +238,7 @@ function createAudioController(config) {
         }
     }
 
-    return Object.freeze({
+    return {
         sound_dice,
         sound_move,
         sound_police_car,
@@ -248,7 +248,7 @@ function createAudioController(config) {
         start_audio,
         start_music,
         stop_music
-    });
+    };
 }
 
 export {createAudioController};

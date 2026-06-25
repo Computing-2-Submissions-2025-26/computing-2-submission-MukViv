@@ -1,5 +1,5 @@
 /*global requestAnimationFrame*/
-//This file is for controlling the the pop up tutorial instructions
+// Controls the how-to-play pop up.
 
 /**
  * Builds the how-to-play pop up window for Chess Thieves.
@@ -140,14 +140,14 @@ const createIntroController = function createIntroController(config) {
         }
     };
 
-    return Object.freeze({
+    return {
         close_intro,
         go_intro_back,
         go_intro_next,
         handle_intro_keydown,
         is_open,
         show_intro
-    });
+    };
 };
 
 export {createIntroController};

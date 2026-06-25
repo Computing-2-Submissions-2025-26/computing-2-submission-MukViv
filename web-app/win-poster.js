@@ -1,5 +1,5 @@
 /*jslint browser*/
-//This file is for controlling the video that plays when someone wins
+// Controls the video that plays when someone wins.
 
 /**
  * Builds the winning-video poster controller for Chess Thieves.
@@ -124,10 +124,10 @@ const createWinPosterController = function createWinPosterController(config) {
         }, config.display_time);
     };
 
-    return Object.freeze({
+    return {
         clear_win_poster,
         trigger_win_poster
-    });
+    };
 };
 
 export {createWinPosterController};

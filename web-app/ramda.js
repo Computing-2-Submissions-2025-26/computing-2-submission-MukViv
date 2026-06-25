@@ -1,4 +1,4 @@
-//Importing this way keeps lint happy
+// Local wrapper for the Ramda functions used by the game.
 
 import all from "../node_modules/ramda/es/all.js";
 import any from "../node_modules/ramda/es/any.js";

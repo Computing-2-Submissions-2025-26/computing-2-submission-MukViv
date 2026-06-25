@@ -9,7 +9,7 @@ import R from "./ramda.js";
  * @namespace ChessThieves
  */
 
-const ChessThieves = Object.create(null);
+const ChessThieves = {};
 
 /**
  * A board coordinate.
@@ -92,21 +92,21 @@ const PLAYER_THIEF = "thief";
  */
 const PLAYER_KING = "king";
 
-const thief_move_die = Object.freeze([
+const thief_move_die = [
     "pawn",
     "pawn",
     "knight",
     "bishop",
     "rook",
     "queen"
-]);
+];
 
 const START_THIEF_ROW = 7;
 const START_KING_ROW = 0;
 const START_EXIT_ROW = 1;
 const START_TRAFFIC_BARRIER_COUNT = 4;
 
-// Private helpers — each only references consts defined above it.
+// Private helpers.
 
 const same_position = function same_position(first, second) {
     return first.row === second.row && first.column === second.column;
@@ -390,13 +390,13 @@ const is_valid_queen_move = function is_valid_queen_move(board, start, end) {
     );
 };
 
-const thief_move_validators = Object.freeze({
+const thief_move_validators = {
     bishop: is_valid_bishop_move,
     knight: is_valid_knight_move,
     pawn: is_valid_pawn_move,
     queen: is_valid_queen_move,
     rook: is_valid_rook_move
-});
+};
 
 const random_unused_column = function random_unused_column(
     row,
