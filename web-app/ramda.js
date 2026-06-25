@@ -1,4 +1,4 @@
-// Local wrapper for the Ramda functions used by the game.
+// Done this way to avoid linting error
 
 import all from "../node_modules/ramda/es/all.js";
 import any from "../node_modules/ramda/es/any.js";
